@@ -1,103 +1,233 @@
+"use client";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, Upload } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function Component() {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleDeviceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+    const file = files[0];
+    if (file && file.type === "application/pdf") {
+      const fileUrl = URL.createObjectURL(file);
+
+      sessionStorage.setItem("UploadedFile", fileUrl);
+
+      router.push("/preview");
+    }
+  };
+  const handleDriveUploaad = () => {};
+  const handleBoxUpload = () => {};
+  const handleOneDriveUpload = () => {};
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div
+      className='min-h-screen bg-black text-white  overflow-hidden absolute inset-0 bg-cover bg-center bg-no-repeat'
+      style={{
+        backgroundImage: `url('/background.png')`,
+      }}
+    >
+      {/* Content */}
+      <div className='relative z-10 flex flex-col min-h-screen'>
+        {/* Header */}
+        <header className='flex items-center justify-between p-6 lg:px-12'>
+          <div className='flex items-center justify-center space-x-2'>
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+              src={"/logo.png"}
+              alt='png'
+              height={100}
+              width={100}
+              className='w-[30px] mb-4 h-[40px] object-cover'
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <span className='text-xl font-light'>
+              <Image
+                src={"/words.png"}
+                alt='png'
+                height={100}
+                width={100}
+                className='w-[170px] h-[50px] object-cover'
+              />
+            </span>
+          </div>
+
+          <nav className='flex items-center space-x-6'>
+            <Link
+              href='/signup'
+              className='text-white/80 hover:text-white transition-colors'
+            >
+              Sign Up
+            </Link>
+            <span className='text-white/60'>/</span>
+            <Link
+              href='/signin'
+              className='text-white/80 hover:text-white transition-colors'
+            >
+              Sign In
+            </Link>
+          </nav>
+        </header>
+
+        {/* Main Content */}
+        <main className='flex-1 flex flex-col items-center justify-center px-6 text-center'>
+          <div className='max-w-4xl mx-auto space-y-8'>
+            {/* Hero Text */}
+            <div className='space-y-4'>
+              <h1 className='text-5xl lg:text-6xl font-normal tracking-wide'>
+                Sign. Review. Lock.
+              </h1>
+              <p className='text-xl text-white/80 max-w-2xl mx-auto'>
+                The only e-signature platform with built-in forensic AI
+              </p>
+            </div>
+
+            {/* Upload Area */}
+            <div className='mt-3'>
+              <div className='border-2 border-dashed border-white/30 rounded-lg p-12 bg-white/15  max-w-lg mx-auto'>
+                <div className='space-y-6'>
+                  <div className='flex justify-center'>
+                    <Image
+                      src={"/upload.png"}
+                      alt='png'
+                      height={100}
+                      width={100}
+                      className='w-[40px] h-[40px] object-cover'
+                    />
+                  </div>
+                  <input
+                    type='file'
+                    ref={inputRef}
+                    accept='.pdf'
+                    onChange={handleDeviceUpload}
+                    className='hidden'
+                  />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      asChild
+                      className='border-none focus:outline-none'
+                    >
+                      <Button
+                        className='bg-blue-500 w-33 hover:bg-blue-600 text-white px-6 py-2 rounded-sm font-medium'
+                        size='default'
+                      >
+                        <Upload className='w-4 h-4 mr-2' />
+                        Upload
+                        <ChevronDown className='w-4 h-4 ml-2' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-33'>
+                      <DropdownMenuItem
+                        onClick={() => inputRef.current?.click()}
+                      >
+                        {" "}
+                        <Image
+                          src={"/pc.svg"}
+                          alt='png'
+                          height={10}
+                          width={10}
+                          className='w-[17px] h-[17px] object-cover'
+                        />{" "}
+                        My Device
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDriveUploaad}>
+                        {" "}
+                        <Image
+                          src={"/drive.svg"}
+                          alt='png'
+                          height={10}
+                          width={10}
+                          className='w-[17px] h-[17px] object-cover'
+                        />{" "}
+                        Google Drive
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleOneDriveUpload}>
+                        {" "}
+                        <Image
+                          src={"/one.svg"}
+                          alt='png'
+                          height={10}
+                          width={10}
+                          className='w-[17px] h-[17px] object-cover'
+                        />{" "}
+                        One Drive
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleBoxUpload}>
+                        {" "}
+                        <Image
+                          src={"/box.svg"}
+                          alt='png'
+                          height={10}
+                          width={10}
+                          className='w-[17px] h-[17px] object-cover'
+                        />{" "}
+                        Dropbox
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <p className='text-white/60 text-sm'>Drag your files here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className='p-6 lg:px-12'>
+          <div className='flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0'>
+            <div className='text-white/60 text-sm'>
+              © 2025 Torney.cc. All Rights Reserved
+            </div>
+
+            <nav className='flex items-center space-x-8 text-sm'>
+              <Link
+                href='/pricing'
+                className='text-white/60 hover:text-white transition-colors'
+              >
+                Pricing
+              </Link>
+              <div className='flex items-center space-x-2'>
+                <Link
+                  href='/templates'
+                  className='text-white/60 hover:text-white transition-colors'
+                >
+                  Templates
+                </Link>
+                <ChevronDown className='w-3 h-3 text-white/60' />
+              </div>
+              <Link
+                href='/support'
+                className='text-white/60 hover:text-white transition-colors'
+              >
+                Support
+              </Link>
+              <Link
+                href='/terms'
+                className='text-white/60 hover:text-white transition-colors'
+              >
+                Terms of Use
+              </Link>
+              <Link
+                href='/privacy'
+                className='text-white/60 hover:text-white transition-colors'
+              >
+                Privacy Policy
+              </Link>
+            </nav>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
