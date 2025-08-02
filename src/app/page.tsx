@@ -11,22 +11,45 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRef } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function Component() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const handleDeviceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeviceUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = event.target.files;
     if (!files || files.length === 0) {
       return;
     }
     const file = files[0];
-    if (file && file.type === "application/pdf") {
-      const fileUrl = URL.createObjectURL(file);
+    console.log(file);
+    const formData = new FormData();
+    formData.append("file", file);
 
-      sessionStorage.setItem("UploadedFile", fileUrl);
+    // if (file && file.type === "application/pdf") {
 
-      router.push("/preview");
+    //   const fileUrl = URL.createObjectURL(file);
+
+    //   sessionStorage.setItem("UploadedFile", fileUrl);
+
+    //   router.push("/preview");
+    // }
+
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/guest-upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log(data);
+    } catch (error) {
+      console.log(error);
     }
   };
   const handleDriveUploaad = () => {};
@@ -84,7 +107,7 @@ export default function Component() {
           <div className='max-w-4xl mx-auto space-y-8'>
             {/* Hero Text */}
             <div className='space-y-4'>
-              <h1 className='text-5xl lg:text-6xl font-normal tracking-wide'>
+              <h1 className='text-5xl  lg:text-6xl font-normal tracking-wide'>
                 Sign. Review. Lock.
               </h1>
               <p className='text-xl text-white/80 max-w-2xl mx-auto'>

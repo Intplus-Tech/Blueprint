@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import Link from "next/link";
-import { AuthModal } from "./components/siginModal";
+import AddNewComponents from "./components/AddNewComponents";
+import Signers from "./components/Signers";
+import AiModal from "./components/AiModal";
+import AddSignature from "./components/AddSignature";
+import jsPDF from "jspdf";
 
 const PDFViewer = () => {
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -21,7 +25,16 @@ const PDFViewer = () => {
   const canvasRef = useRef(null);
   const [pageNum, setPageNum] = useState(1);
   const [active, setActive] = useState("note");
-  const auth = false;
+  const [currentSignature, setCurrentSignature] = useState("");
+  const [signatures, setSignatures] = useState([]);
+
+  // Dragging state
+  const [draggedSignature, setDraggedSignature] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const overlayRef = useRef(null);
+  const canvasContainerRef = useRef(null);
 
   // Load PDF.js
   useEffect(() => {
@@ -94,34 +107,16 @@ const PDFViewer = () => {
 
   const goToPage = async (pageNum) => {
     if (pdfDoc && pageNum >= 1 && pageNum <= totalPages) {
-      setCurrentPage(pdfDoc,pageNum);
+      setCurrentPage(pageNum);
       await renderPage(pdfDoc, pageNum);
     }
   };
+
   useEffect(() => {
     if (pdfDoc) {
-      renderPage(pageNum); // Always render the current page after loading
+      renderPage(pdfDoc, pageNum);
     }
   }, [pdfDoc, pageNum]);
-  const nextPage = () => {
-    if (currentPage < totalPages) goToPage(currentPage + 1);
-  };
-
-  const prevPage = () => {
-    if (currentPage > 1) goToPage(currentPage - 1);
-  };
-
-  const zoomIn = async () => {
-    const newScale = Math.min(scale + 0.2, 3);
-    setScale(newScale);
-    await renderPage(pdfDoc, currentPage);
-  };
-
-  const zoomOut = async () => {
-    const newScale = Math.max(scale - 0.2, 0.5);
-    setScale(newScale);
-    await renderPage(pdfDoc, currentPage);
-  };
 
   useEffect(() => {
     if (pdfDoc) {
@@ -129,10 +124,227 @@ const PDFViewer = () => {
     }
   }, [scale]);
 
+  const handleSignatureSelect = (signature) => {
+      console.log("Setting signature:", signature);
+    console.log("Current active state:", active);
+    setCurrentSignature(signature);
+  };
+const addSignatureToPage = (e) => {
+   console.log("Adding signature attempt:");
+    console.log("Current active state:", active);
+    console.log("Current signature:", currentSignature);
+  // Add these checks to ensure the click is valid
+  if (!currentSignature || !canvasRef.current || isDragging) {
+    console.log("Blocked:", { currentSignature: !!currentSignature, canvas: !!canvasRef.current, isDragging });
+    return;
+  }
+  
+  // Prevent event bubbling that might interfere
+  e.preventDefault();
+  e.stopPropagation();
+
+  const canvas = canvasRef.current;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const newSignature = {
+    id: Date.now(),
+    x,
+    y,
+    page: currentPage,
+    data: currentSignature,
+    width: 200,
+    height: 110,
+  };
+  
+  console.log("Adding signature:", newSignature);
+  setSignatures(prev => [...prev, newSignature]);
+  
+  // Important: Don't clear currentSignature here if you want to place multiple
+  // setCurrentSignature(""); // Remove this line or make it conditional
+};
+
+  const removeSignature = (id) => {
+    setSignatures(signatures.filter((sig) => sig.id !== id));
+  };
+
+  // Drag handlers
+  const handleMouseDown = (e, signature) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = overlayRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left - (signature.x - signature.width / 2);
+    const offsetY = e.clientY - rect.top - (signature.y - signature.height / 2);
+
+    setDraggedSignature(signature);
+    setDragOffset({ x: offsetX, y: offsetY });
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !draggedSignature || !overlayRef.current) return;
+
+    const rect = overlayRef.current.getBoundingClientRect();
+    const newX =
+      e.clientX - rect.left - dragOffset.x + draggedSignature.width / 2;
+    const newY =
+      e.clientY - rect.top - dragOffset.y + draggedSignature.height / 2;
+
+    // Update signature position
+    setSignatures((prev) =>
+      prev.map((sig) =>
+        sig.id === draggedSignature.id ? { ...sig, x: newX, y: newY } : sig
+      )
+    );
+
+    // Update dragged signature reference
+    setDraggedSignature((prev) => ({ ...prev, x: newX, y: newY }));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDraggedSignature(null);
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, draggedSignature, dragOffset]);
+
+  // Update overlay positioning to match canvas
+  useEffect(() => {
+    if (
+      !overlayRef.current ||
+      !canvasRef.current ||
+      !canvasContainerRef.current
+    ) {
+      return;
+    }
+
+    const updateOverlayPosition = () => {
+      const canvas = canvasRef.current;
+      const container = canvasContainerRef.current;
+      const overlay = overlayRef.current;
+
+      if (canvas && container && overlay) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Position overlay relative to the container
+        overlay.style.position = "absolute";
+        overlay.style.left = canvasRect.left - containerRect.left + "px";
+        overlay.style.top = canvasRect.top - containerRect.top + "px";
+        overlay.style.width = canvas.offsetWidth + "px";
+        overlay.style.height = canvas.offsetHeight + "px";
+        // overlay.style.pointerEvents = "auto"; // Changed to auto to enable dragging
+      }
+    };
+
+    updateOverlayPosition();
+
+    // Update on window resize or scroll
+    const handleResize = () => updateOverlayPosition();
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize);
+    };
+  }, [pdfDoc, currentPage, scale, signatures]);
+
+  // Function to handle PDF download
+  // Replace your handleDownload function with this improved version
+  const handleDownload = async () => {
+    if (!pdfDoc || !canvasRef.current) return;
+
+    try {
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: "a4",
+      });
+
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.width = viewport.width + 10;
+        canvas.height = viewport.height + 70;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+        const pageImage = canvas.toDataURL("image/png");
+
+        if (pageNum > 1) {
+          pdf.addPage([viewport.width, viewport.height], "portrait");
+        } else {
+          pdf.internal.pageSize.setWidth(viewport.width);
+          pdf.internal.pageSize.setHeight(viewport.height);
+        }
+
+        pdf.addImage(pageImage, "PNG", 0, 0, viewport.width, viewport.height);
+
+        const pageSignatures = signatures.filter((sig) => sig.page === pageNum);
+        const displayedCanvas = canvasRef.current;
+        const scaleRatio = viewport.width / displayedCanvas.width;
+        const sizeMultiplier = 1.5; // Increase signature size by 50%
+        const yOffset = 50; // Shift signatures down by 50 pixels in PDF
+
+        for (const sig of pageSignatures) {
+          // Scale signature position and size
+          const scaledX = sig.x * scaleRatio;
+          const scaledY = sig.y * scaleRatio + yOffset; // Apply downward shift
+          const scaledWidth = sig.width * scaleRatio * sizeMultiplier; // Increase size
+          const scaledHeight = sig.height * scaleRatio * sizeMultiplier; // Increase size
+
+          // Center the signature at the click point
+          const finalX = scaledX - scaledWidth / 2;
+          const finalY = scaledY - scaledHeight / 2;
+
+          // Ensure signature stays within page bounds
+          const boundedX = Math.max(
+            0,
+            Math.min(finalX, viewport.width - scaledWidth)
+          );
+          const boundedY = Math.max(
+            0,
+            Math.min(finalY, viewport.height - scaledHeight)
+          );
+
+          // Add signature image to PDF
+          pdf.addImage(
+            sig.data.data,
+            "PNG",
+            boundedX,
+            boundedY,
+            scaledWidth,
+            scaledHeight
+          );
+        }
+      }
+
+      pdf.save("modified_document.pdf");
+    } catch (err) {
+      console.error("Failed to generate PDF for download", err);
+    }
+  };
   return (
     <div className='flex h-screen bg-gray-100'>
       {/* Header */}
-      <div className='absolute top-0  left-0 right-0 bg-[#006FEE] text-white p-4 flex items-center justify-between z-10'>
+      <div className='absolute top-0 left-0 right-0 bg-[#006FEE] text-white p-4 flex items-center justify-between z-10'>
         <div className='flex items-center gap-4'>
           <Link
             href={"/"}
@@ -179,9 +391,9 @@ const PDFViewer = () => {
       )}
 
       {/* Main PDF Area */}
-      <div className='flex-1 flex flex-col mt-[60px] '>
+      <div className='flex-1 flex flex-col mt-[60px]'>
         {pdfDoc && (
-          <div className='bg-[#323639] absolute border rounded-xl right-5 top-20 w-[250px] text-white p-3 flex items-center'>
+          <div className='bg-[#323639] absolute border rounded-xl right-5 top-20 w-[250px] text-white p-3 flex items-center z-20'>
             <div className='flex items-center gap-1'>
               <button
                 onClick={() => setActive("note")}
@@ -198,7 +410,10 @@ const PDFViewer = () => {
                   (active === "sign" && "bg-black")
                 }
               >
-                <DropdownMenu onOpenChange={() => setActive("sign")}>
+                <DropdownMenu
+                  open={active === "sign"}
+                  onOpenChange={(open) => setActive(open ? "sign" : "note")}
+                >
                   <DropdownMenuTrigger asChild>
                     <Image
                       src={"/sign.svg"}
@@ -208,9 +423,10 @@ const PDFViewer = () => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='start' className='w-full mt-3'>
-                    <DropdownMenuItem>
-                      <p>not assignes</p>
-                    </DropdownMenuItem>
+                    <AddSignature
+                      onSignatureSelect={handleSignatureSelect}
+                      onClose={() => setActive("note")}
+                    />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -221,7 +437,10 @@ const PDFViewer = () => {
                   (active === "plus" && "bg-black")
                 }
               >
-                <DropdownMenu onOpenChange={() => setActive("plus")}>
+                <DropdownMenu
+                  open={active === "plus"}
+                  onOpenChange={(open) => setActive(open ? "plus" : "note")}
+                >
                   <DropdownMenuTrigger asChild>
                     <Image
                       src={"/plus.svg"}
@@ -231,68 +450,7 @@ const PDFViewer = () => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='start' className='w-[160px] mt-3'>
-                    {auth ? (
-                      <>
-                        <DropdownMenuItem>
-                          {" "}
-                          <Image
-                            src={"/pc.svg"}
-                            alt='png'
-                            height={10}
-                            width={10}
-                            className='w-[17px] h-[17px] object-cover'
-                          />{" "}
-                          My Device
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          {" "}
-                          <Image
-                            src={"/drive.svg"}
-                            alt='png'
-                            height={10}
-                            width={10}
-                            className='w-[17px] h-[17px] object-cover'
-                          />{" "}
-                          Google Drive
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          {" "}
-                          <Image
-                            src={"/one.svg"}
-                            alt='png'
-                            height={10}
-                            width={10}
-                            className='w-[17px] h-[17px] object-cover'
-                          />{" "}
-                          OneDrive
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          {" "}
-                          <Image
-                            src={"/box.svg"}
-                            alt='png'
-                            height={10}
-                            width={10}
-                            className='w-[17px] h-[17px] object-cover'
-                          />{" "}
-                          Drop Box
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <DropdownMenuItem>
-                        <div
-                          className='flex flex-col gap-1'
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <p className='text-black font-bold'>New Document</p>
-                          <span className='font-extralight'>
-                            <AuthModal />
-                            to Add new document
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
+                    <AddNewComponents />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -303,7 +461,10 @@ const PDFViewer = () => {
                   (active === "team" && "bg-black")
                 }
               >
-                <DropdownMenu onOpenChange={() => setActive("team")}>
+                <DropdownMenu
+                  open={active === "team"}
+                  onOpenChange={(open) => setActive(open ? "team" : "note")}
+                >
                   <DropdownMenuTrigger asChild>
                     <Image
                       src={"/team.svg"}
@@ -313,97 +474,7 @@ const PDFViewer = () => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className='mt-3'>
-                    {auth ? (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        className='p-3'
-                      >
-                        <h3 className='text-gray-400 text-base font-semibold mb-2'>
-                          New Signer
-                        </h3>
-                        <form className='flex flex-col gap-2 text-black'>
-                          <div className='flex gap-2'>
-                            <div className='flex-1'>
-                              <label
-                                htmlFor='first-name'
-                                className='block mb-1'
-                              >
-                                First name
-                              </label>
-                              <input
-                                type='text'
-                                id='first-name'
-                                placeholder='First name'
-                                className='border p-2 rounded w-full'
-                              />
-                            </div>
-                            <div className='flex-1'>
-                              <label htmlFor='lastName' className='block mb-1'>
-                                Last name
-                              </label>
-                              <input
-                                id='lastName'
-                                type='text'
-                                placeholder='Last name'
-                                className='border p-2 rounded w-full'
-                              />
-                            </div>
-                          </div>
-                          <div className='flex-1'>
-                            <label htmlFor='email'>Email Address</label>
-                            <input
-                              id='email'
-                              type='email'
-                              placeholder='Email address'
-                              className='border p-2 rounded w-full'
-                            />
-                          </div>
-                          <div className='flex items-center gap-2'>
-                            <input type='checkbox' id='more' />
-                            <label
-                              htmlFor='more'
-                              className='text-blue-500 cursor-pointer text-sm'
-                            >
-                              Add more signer
-                            </label>
-                          </div>
-                          <div className='flex justify-end gap-2 mt-2'>
-                            <button
-                              type='button'
-                              className='px-3 py-1 border rounded'
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type='submit'
-                              className='px-3 py-1 bg-blue-500 text-white rounded'
-                            >
-                              Send Invite
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    ) : (
-                      <DropdownMenuItem>
-                        <div
-                          className='flex flex-col gap-1'
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <p className='text-black font-bold'>
-                            Add Co-Signer(s)
-                          </p>
-                          <span className='font-extralight'>
-                            <AuthModal />
-                            Add people to sign the same
-                          </span>
-                          <span className='font-extralight'>
-                            document with you.
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
+                    <Signers />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -414,7 +485,10 @@ const PDFViewer = () => {
                   (active === "write" && "bg-black")
                 }
               >
-                <DropdownMenu onOpenChange={() => setActive("write")}>
+                <DropdownMenu
+                  open={active === "write"}
+                  onOpenChange={(open) => setActive(open ? "write" : "note")}
+                >
                   <DropdownMenuTrigger asChild>
                     <Image
                       src={"/write.svg"}
@@ -424,62 +498,7 @@ const PDFViewer = () => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    {auth ? (
-                      <DropdownMenuItem>
-                        <div className='w-full flex-col space-x-3 space-y-4 p-4 gap-5'>
-                          <p className='text-2xl text-gray-500 '>
-                            AI Document Reviewer
-                          </p>
-
-                          <p>
-                            Do you want continue with AI Torney to Review your
-                            document.
-                          </p>
-
-                          <p className='text-sm text-gray-600'>
-                            By using you agree to AI Torney
-                            <span className='text-blue-600 underline px-1'>
-                              Terms & Condition
-                            </span>
-                            and
-                            <span className='text-blue-600 px-1 underline'>
-                              Privacy Policy
-                            </span>
-                            .
-                          </p>
-
-                          <div className='flex justify-end gap-2 mt-2'>
-                            <button
-                              type='button'
-                              className='px-3 py-2 border hover:bg-gray-100 rounded-xl'
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type='submit'
-                              className='px-3 py-2 bg-blue-500 hover:bg-blue-700 text-white rounded-xl'
-                            >
-                              Review free
-                            </button>
-                          </div>
-                        </div>
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem>
-                        <div className='flex flex-col gap-1'
-                          onClick={(e) => e.stopPropagation()}
-                        onMouseDown={(e) => e.stopPropagation()}>
-                          <p className='text-black font-bold'>AI Review</p>
-                          <span className='font-extralight'>
-                            <AuthModal />
-                            Review and get recommendation
-                          </span>
-                          <span className='font-extralight'>
-                            about your document from our AI.
-                          </span>
-                        </div>
-                      </DropdownMenuItem>
-                    )}
+                    <AiModal />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -490,7 +509,10 @@ const PDFViewer = () => {
                   (active === "download" && "bg-black")
                 }
               >
-                <DropdownMenu onOpenChange={() => setActive("download")}>
+                <DropdownMenu
+                  open={active === "download"}
+                  onOpenChange={(open) => setActive(open ? "download" : "note")}
+                >
                   <DropdownMenuTrigger asChild>
                     <Image
                       src={"/download.svg"}
@@ -500,8 +522,8 @@ const PDFViewer = () => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem>
-                      <p>hey</p>
+                    <DropdownMenuItem onClick={handleDownload}>
+                      Download PDF
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -521,11 +543,77 @@ const PDFViewer = () => {
               No PDF loaded. Return to upload page.
             </div>
           ) : (
-            <div className='flex justify-center w-full  mx-auto'>
+            <div
+              ref={canvasContainerRef}
+              className='flex justify-center w-full mx-auto relative'
+            >
               <canvas
                 ref={canvasRef}
                 className='shadow-lg border border-gray-300 bg-white max-w-full h-auto'
+                onClick={currentSignature ? addSignatureToPage : undefined}
+                style={{ cursor: currentSignature ? "crosshair" : "" }}
               />
+
+              {/* Signature Overlay */}
+              <div
+                ref={overlayRef}
+                className='absolute '
+                style={{
+                  zIndex: 10,
+                   pointerEvents: currentSignature && !isDragging ? "none" : "auto",
+                }}
+              >
+                {signatures
+                  .filter((sig) => sig.page === currentPage)
+                  .map((sig) => (
+                    <div
+                      key={sig.id}
+                      className={`absolute group select-none ${
+                        isDragging && draggedSignature?.id === sig.id
+                          ? "cursor-grabbing"
+                          : "cursor-grab hover:ring-2 hover:ring-blue-400"
+                      }`}
+                      style={{
+                        left: sig.x - sig.width / 2,
+                        top: sig.y - sig.height / 2,
+                        width: sig.width,
+                        height: sig.height,
+                           pointerEvents: "auto"
+                      }}
+                      onMouseDown={(e) => handleMouseDown(e, sig)}
+                    >
+                      <img
+                        src={sig.data.data}
+                        alt='Signature'
+                        className='w-full h-full object-cover pointer-events-none'
+                        draggable={false}
+                      />
+                      {/* Delete button on hover */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSignature(sig.id);
+                        }}
+                        className='absolute -top-2 transition-opacity text-red-500 hover:text-red-700 cursor-pointer -right-1 text-xl font-bold bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100'
+                        style={{ pointerEvents: "auto" }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+              </div>
+
+              {currentSignature && !isDragging && (
+                <div className='absolute top-4 left-4 bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm shadow-md z-20'>
+                  📝 Click on the document to place your signature
+                </div>
+              )}
+
+              {isDragging && (
+                <div className='absolute top-4 left-4 bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm shadow-md z-20'>
+                  🖱️ Dragging signature - release to place
+                </div>
+              )}
             </div>
           )}
         </div>
