@@ -28,29 +28,29 @@ export default function Component() {
     const formData = new FormData();
     formData.append("file", file);
 
-    // if (file && file.type === "application/pdf") {
+    if (file && file.type === "application/pdf") {
 
-    //   const fileUrl = URL.createObjectURL(file);
+      const fileUrl = URL.createObjectURL(file);
 
-    //   sessionStorage.setItem("UploadedFile", fileUrl);
+      sessionStorage.setItem("UploadedFile", fileUrl);
 
-    //   router.push("/preview");
-    // }
-
-    try {
-      const { data } = await axios.post(
-        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/guest-upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      console.log(data);
-    } catch (error) {
-      console.log(error);
+      router.push("/preview");
     }
+
+    // try {
+    //   const { data } = await axios.post(
+    //     process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/guest-upload",
+    //     formData,
+    //     {
+    //       headers: {
+    //         "Content-Type": "multipart/form-data",
+    //       },
+    //     }
+    //   );
+    //   console.log(data);
+    // } catch (error) {
+    //   console.log(error);
+    // }
   };
   const handleDriveUploaad = () => {};
   const handleBoxUpload = () => {};
