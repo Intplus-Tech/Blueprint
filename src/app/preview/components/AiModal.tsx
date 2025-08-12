@@ -1,7 +1,11 @@
+import { UserContext } from "@/app/AppContext";
 import { AuthModal } from "./siginModal";
+import { useContext } from "react";
 
 const AiModal = () => {
-    const auth = true
+  const { userAuth } = useContext(UserContext);
+   
+     const auth = userAuth?.access_token ? true : false;
   return (
     <div>
       {auth ? (

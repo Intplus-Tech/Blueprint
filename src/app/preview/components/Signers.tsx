@@ -1,7 +1,11 @@
+import { useContext } from "react";
 import { AuthModal } from "./siginModal";
+import { UserContext } from "@/app/AppContext";
 
 const Signers = () => {
-    const auth = false
+    const { userAuth } = useContext(UserContext);
+  
+    const auth = userAuth?.access_token ? true : false;
   return (
     <div>
       {auth ? (

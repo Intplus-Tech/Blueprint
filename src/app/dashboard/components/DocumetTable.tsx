@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,11 @@ import { AddSignerModal } from "./AddSignerModal";
 import { ViewDetails } from "./ViewDetails";
 import { ResendModal } from "./Resendmodal";
 import { DeleteModal } from "./DeleteModal";
+import Link from "next/link";
+import { UserContext } from "@/app/AppContext";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface Signer {
   name: string;
@@ -38,6 +43,7 @@ interface Document {
   signers: Signer[];
   created: string;
   lastActivity: string;
+  url?: string;
 }
 
 const data: Document[] = [
@@ -192,17 +198,57 @@ const getStatusText = (status: string) => {
 const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [currentPage, setCurrentPage] = useState<number>(11);
-
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const { userAuth } = useContext(UserContext);
+  const access_token = userAuth?.access_token;
+  const [Documents, setDocuments] = useState<Document[]>([]);
+   const router = useRouter();
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    const fetchUserDocuments = async () => {
+      try {
+        const { data } = await axios.get(
+          process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/documents",
+          {
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+            },
+          }
+        );
+        console.log(data.documents);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formattedData = data.documents.map((doc: any) => ({
+          documentName: doc.document_name,
+          documentId: doc.document_id,
+          status: doc.status,
+          signers: doc.signers,
+          created: doc.created_at,
+          lastActivity: doc.last_activity_at,
+          url: doc.file_url,
+        }));
+        setDocuments(formattedData);
+        console.log("fetched", formattedData);
+
+        toast.success("success");
+      } catch (error) {
+        toast.error("not success");
+        console.log(error);
+      }
+    };
+    if (access_token) {
+      fetchUserDocuments();
+    }
+  }, [access_token]);
 
   if (!isMounted) return null;
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelected(data.map((item) => item.id));
+      setSelected(Documents.map((item) => Number(item.documentId)));
     } else {
       setSelected([]);
     }
@@ -217,17 +263,34 @@ const DocumentTable = () => {
   };
 
   const pages = Array.from({ length: 10 }, (_, i) => i + 1);
+  interface FormatDate {
+    (dateString: string): string;
+  }
 
+  const formatDate: FormatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // months are 0-based
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+  const viewDocument = (name: string, url: string) => {
+    sessionStorage.setItem("UploadedFile", url);
+    sessionStorage.setItem("UploadedFileName", name);
+    router.push("/preview");
+  };
   return (
     <div className='w-full  rounded-lg px-10 shadow-sm border border-gray-200'>
       {/* Header */}
       <div className='flex items-center mt-3 justify-between border-b border-gray-200'>
         <div className='flex items-center gap-4'>
           <h1 className='text-2xl font-semibold text-gray-900'>Documents</h1>
-          <Button className='bg-[#268DE9] hover:bg-blue-700 text-white'>
-            <Plus className='w-4 h-4 mr-2' />
-            New Document
-          </Button>
+          <Link href={"/"}>
+            <Button className='bg-[#268DE9] hover:bg-blue-700 text-white'>
+              <Plus className='w-4 h-4 mr-2' />
+              New Document
+            </Button>
+          </Link>
         </div>
         <div className='flex items-center gap-2'>
           <Button variant='outline' className='bg-transparent' size='sm'>
@@ -273,17 +336,17 @@ const DocumentTable = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item) => (
+            {Documents.map((item) => (
               <TableRow
-                key={item.id}
+                key={item.documentId}
                 className='border-b border-gray-100 hover:bg-gray-50'
               >
                 <TableCell>
                   <Checkbox
                     className='border-[#636363]'
-                    checked={selected.includes(item.id)}
+                    checked={selected.includes(Number(item.documentId))}
                     onCheckedChange={(checked) =>
-                      handleSelectItem(item.id, checked as boolean)
+                      handleSelectItem(Number(item.documentId), checked as boolean)
                     }
                   />
                 </TableCell>
@@ -335,9 +398,11 @@ const DocumentTable = () => {
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className='text-[#636363]'>{item.created}</TableCell>
                 <TableCell className='text-[#636363]'>
-                  {item.lastActivity}
+                  {formatDate(item.created)}
+                </TableCell>
+                <TableCell className='text-[#636363]'>
+                  {formatDate(item.lastActivity)}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -347,7 +412,12 @@ const DocumentTable = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align='end' className='w-48'>
-                      <DropdownMenuItem className='text-[#333333]'>
+                      <DropdownMenuItem
+                        className='text-[#333333]'
+                        onClick={() =>
+                          viewDocument(item.documentName, item.url ?? "")
+                        }
+                      >
                         Open Document
                       </DropdownMenuItem>
                       <DropdownMenuItem className='text-[#333333]'>
@@ -382,7 +452,7 @@ const DocumentTable = () => {
                           onClick={(e) => e.stopPropagation()}
                           onMouseDown={(e) => e.stopPropagation()}
                         >
-                         <DeleteModal />
+                          <DeleteModal />
                         </div>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

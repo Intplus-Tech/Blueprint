@@ -31,6 +31,7 @@ export default function Dashboard() {
         >
           Templates
         </Button>
+        
       </div>
       {active === "document" && <DocumentTable /> }
     </div>

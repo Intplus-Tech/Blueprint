@@ -14,6 +14,7 @@ import Signers from "./components/Signers";
 import AiModal from "./components/AiModal";
 import AddSignature from "./components/AddSignature";
 import jsPDF from "jspdf";
+import { useRouter } from "next/navigation";
 
 const PDFViewer = () => {
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -27,7 +28,8 @@ const PDFViewer = () => {
   const [active, setActive] = useState("note");
   const [currentSignature, setCurrentSignature] = useState("");
   const [signatures, setSignatures] = useState([]);
-
+  const[pdfName,setPdfName]=useState("")
+ const router = useRouter();
   // Dragging state
   const [draggedSignature, setDraggedSignature] = useState(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -56,6 +58,8 @@ const PDFViewer = () => {
   // Load PDF file from sessionStorage
   const loadPdfFromSession = async () => {
     const fileUrl = sessionStorage.getItem("UploadedFile");
+    const filename=sessionStorage.getItem("UploadedFileName");
+    setPdfName(filename)
     if (!fileUrl) {
       setIsLoading(false);
       return;
@@ -162,7 +166,7 @@ const addSignatureToPage = (e) => {
   setSignatures(prev => [...prev, newSignature]);
   
   // Important: Don't clear currentSignature here if you want to place multiple
-  // setCurrentSignature(""); // Remove this line or make it conditional
+  setCurrentSignature(""); // Remove this line or make it conditional
 };
 
   const removeSignature = (id) => {
@@ -282,8 +286,8 @@ const addSignatureToPage = (e) => {
 
         const canvas = document.createElement("canvas");
         const context = canvas.getContext("2d");
-        canvas.width = viewport.width + 10;
-        canvas.height = viewport.height + 70;
+        canvas.width = viewport.width + 15;
+        canvas.height = viewport.height + 110;
 
         await page.render({ canvasContext: context, viewport }).promise;
         const pageImage = canvas.toDataURL("image/png");
@@ -336,7 +340,7 @@ const addSignatureToPage = (e) => {
         }
       }
 
-      pdf.save("modified_document.pdf");
+      pdf.save(pdfName||"modified-document");
     } catch (err) {
       console.error("Failed to generate PDF for download", err);
     }
@@ -345,16 +349,12 @@ const addSignatureToPage = (e) => {
     <div className='flex h-screen bg-gray-100'>
       {/* Header */}
       <div className='absolute top-0 left-0 right-0 bg-[#006FEE] text-white p-4 flex items-center justify-between z-10'>
-        <div className='flex items-center gap-4'>
-          <Link
-            href={"/"}
-            className='flex items-center gap-2 hover:bg-blue-700 px-3 py-1 rounded'
-          >
+        <div onClick={()=> router.back()} className='flex items-center gap-2 hover:bg-blue-700 px-3 py-1 rounded'>
+        
             <ChevronLeft size={20} />
             Back
-          </Link>
         </div>
-        <span className='font-medium'>Contract Agreement Star Klint...</span>
+        <span className='font-medium'>{pdfName}</span>
         <div className='flex items-center gap-2'>
           <span>Sign Up</span>
           <span>/</span>

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { storeInSession } from "../components/session";
@@ -13,13 +13,21 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { UserContext } from "@/app/AppContext";
 import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [rememberPassword, setRememberPassword] = useState(false);
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const { userAuth, setUserAuth } = useContext(UserContext);
+  const router = useRouter();
   const access_token = userAuth?.access_token;
+
+  useEffect(() => {
+    if (access_token) {
+      router.push("/dashboard");
+    }
+  }, [access_token, router]);
   const [form, setForm] = useState({
     Email: "",
     Password: "",
@@ -45,6 +53,7 @@ export default function LoginPage() {
       );
       setIsLoading(false);
       toast.success(data.msg);
+      router.push("/dashboard");
       storeInSession("user", JSON.stringify(data));
       setUserAuth(data);
       console.log(data);
@@ -60,40 +69,52 @@ export default function LoginPage() {
   };
 
   return (
-    <div className='min-h-screen flex'>
+    <div className='h-screen flex '>
       {/* Left Side - Image */}
       <div className='hidden lg:flex lg:w-1/2 relative'>
+        {/* Background image */}
         <img
-          src='/bg.svg'
+          src='/bg.svg' // Replace with your uploaded workspace image path
           alt='Collaborative workspace with people working around a table'
           className='w-full h-full object-cover'
         />
+
+        {/* Dark transparent overlay */}
+        <div className='absolute inset-0 bg-[#00000099]/60'></div>
+
+        {/* Centered overlay content */}
+        <div className='absolute inset-0 flex flex-col items-center justify-center text-center text-white'>
+          {/* Logo icon */}
+          <Image
+            src='/logo.svg' // Replace with your blue "b" icon path
+            alt='Blueprint Logo'
+            height={90}
+            width={70}
+            className='mb-4'
+          />
+
+          {/* Blueprint doc text */}
+          <div className='flex items-center'>
+            <Image
+              src='/blueprint.png' // Replace with combined "Blueprint doc" text as SVG or style text directly
+              alt='Blueprint doc text'
+              height={60}
+              width={250}
+            />
+          </div>
+
+          {/* Powered by text */}
+          <p className='mt-4 absolute bottom-8 text-xs'>
+            Powered By: <span className='font-semibold'>AI Torney</span>
+          </p>
+        </div>
       </div>
 
       {/* Right Side - Login Form */}
-      <div className='w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50'>
+      <div className='w-full lg:w-1/2 flex  items-center justify-center p-8 bg-gray-50'>
         <div className='w-full max-w-md space-y-6'>
           {/* Logo and Header */}
           <div className='text-center space-y-4'>
-            <div className='flex flex-col items-center justify-center space-x-2'>
-              <div className='flex justify-center'>
-                <Image
-                  src={"/logo.svg"}
-                  alt='png'
-                  height={100}
-                  width={100}
-                  className='w-[70px] mb-2 h-[90px] object-cover'
-                />
-              </div>
-              <Image
-                src={"/blueprint.svg"}
-                alt='png'
-                height={100}
-                width={100}
-                className='w-[250px] h-[60px] object-cover'
-              />
-            </div>
-
             <div className='space-y-2'>
               <h1 className='text-4xl font-normal text-gray-900'>Log in</h1>
               <p className='text-gray-600'>
@@ -138,7 +159,7 @@ export default function LoginPage() {
             </div>
 
             {/* Form Fields */}
-            <form className='space-y-4' onSubmit={handleSubmit}>
+            <form className='space-y-2' onSubmit={handleSubmit}>
               <div>
                 <Label
                   htmlFor='email'
@@ -212,7 +233,7 @@ export default function LoginPage() {
               </div>
 
               <Button className='w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium'>
-                  {isLoading ? (
+                {isLoading ? (
                   <svg
                     className='animate-spin h-5 w-5 text-white'
                     xmlns='http://www.w3.org/2000/svg'
@@ -252,12 +273,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {/* Footer */}
-            <div className='text-center pt-2'>
-              <p className='text-xs text-gray-500'>
-                Powered By: <span className='font-medium'>AI Tomey</span>
-              </p>
-            </div>
+          
           </div>
         </div>
       </div>

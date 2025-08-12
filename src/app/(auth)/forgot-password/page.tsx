@@ -8,15 +8,35 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-
+import axios from "axios";
+import toast from "react-hot-toast";
+// reset-password,token,password,confirm_password
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Handle forgot password logic here
-    setIsSubmitted(true);
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/auth/reset-request",
+        {email}
+      );
+      setIsLoading(false);
+      toast.success(data.msg);
+      setIsSubmitted(true);
+      console.log(data);
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.msg || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {

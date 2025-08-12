@@ -9,13 +9,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRef } from "react";
+import { useContext, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import toast from "react-hot-toast";
+import { UserContext } from "./AppContext";
 
 export default function Component() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { userAuth } = useContext(UserContext);
+  const access_token = userAuth?.access_token;
+  const csrf_token = userAuth?.csrf_token;
   const handleDeviceUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -28,33 +33,96 @@ export default function Component() {
     const formData = new FormData();
     formData.append("file", file);
 
-    if (file && file.type === "application/pdf") {
+    // if (file && file.type === "application/pdf") {
 
-      const fileUrl = URL.createObjectURL(file);
+    //   const fileUrl = URL.createObjectURL(file);
 
-      sessionStorage.setItem("UploadedFile", fileUrl);
+    //   sessionStorage.setItem("UploadedFile", fileUrl);
 
-      router.push("/preview");
-    }
-
-    // try {
-    //   const { data } = await axios.post(
-    //     process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/guest-upload",
-    //     formData,
-    //     {
-    //       headers: {
-    //         "Content-Type": "multipart/form-data",
-    //       },
-    //     }
-    //   );
-    //   console.log(data);
-    // } catch (error) {
-    //   console.log(error);
+    //   router.push("/preview");
     // }
+    const toastId = toast.loading("Uploading your file...");
+    try {
+      if (file && file.type !== "application/pdf") {
+        toast.dismiss(toastId);
+
+        return toast.error("Upload a Pdf");
+      }
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/guest-upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log(data.url);
+      sessionStorage.setItem("UploadedFile", data.url);
+      sessionStorage.setItem("UploadedFileName", file.name);
+      toast.dismiss(toastId);
+
+      toast.success("success");
+      router.push("/preview");
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.log(error);
+    }
+  };
+  const handleDeviceUploadForUser = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+    console.log("for logged user");
+    
+    const file = files[0];
+    console.log(file);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    // if (file && file.type === "application/pdf") {
+
+    //   const fileUrl = URL.createObjectURL(file);
+
+    //   sessionStorage.setItem("UploadedFile", fileUrl);
+
+    //   router.push("/preview");
+    // }
+    const toastId = toast.loading("Uploading your file...");
+    try {
+      if (file && file.type !== "application/pdf") {
+        toast.dismiss(toastId);
+
+        return toast.error("Upload a Pdf");
+      }
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/upload",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "X-CSRF-Token": csrf_token,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log(data.url);
+      console.log(data);
+      sessionStorage.setItem("UploadedFile", data.url);
+      sessionStorage.setItem("UploadedFileName", file.name);
+      toast.dismiss(toastId);
+
+      toast.success("success");
+      router.push("/preview");
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.log(error);
+    }
   };
   const handleDriveUploaad = () => {};
-  const handleBoxUpload = () => {};
-  const handleOneDriveUpload = () => {};
   return (
     <div
       className='min-h-screen bg-black text-white  overflow-hidden absolute inset-0 bg-cover bg-center bg-no-repeat'
@@ -132,7 +200,11 @@ export default function Component() {
                     type='file'
                     ref={inputRef}
                     accept='.pdf'
-                    onChange={handleDeviceUpload}
+                    onChange={
+                      !access_token
+                        ? handleDeviceUpload
+                        : handleDeviceUploadForUser
+                    }
                     className='hidden'
                   />
                   <DropdownMenu>
@@ -173,28 +245,6 @@ export default function Component() {
                           className='w-[17px] h-[17px] object-cover'
                         />{" "}
                         Google Drive
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleOneDriveUpload}>
-                        {" "}
-                        <Image
-                          src={"/one.svg"}
-                          alt='png'
-                          height={10}
-                          width={10}
-                          className='w-[17px] h-[17px] object-cover'
-                        />{" "}
-                        One Drive
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleBoxUpload}>
-                        {" "}
-                        <Image
-                          src={"/box.svg"}
-                          alt='png'
-                          height={10}
-                          width={10}
-                          className='w-[17px] h-[17px] object-cover'
-                        />{" "}
-                        Dropbox
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

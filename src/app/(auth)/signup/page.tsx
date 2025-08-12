@@ -65,42 +65,56 @@ export default function SignUpPage() {
   };
   useEffect(() => {
     if (access_token) {
-      // router.push("/");
-      return
+      router.push("/dashboard");
     }
-  }, [access_token,router]);
+  },[access_token,router]);
   return (
-    <div className='min-h-screen flex'>
-      {/* Left Side - Image */}
-      <div className='hidden lg:flex lg:w-1/2 relative'>
-        <img
-          src='/bg.svg'
-          alt='Collaborative workspace with people working around a table'
-          className='w-full h-full object-cover'
-        />
-      </div>
+    <div className='h-screen flex'>
+        {/* Left Side - Image */}
+          <div className='hidden lg:flex lg:w-1/2 relative'>
+            {/* Background image */}
+            <img
+              src='/bg.svg' // Replace with your uploaded workspace image path
+              alt='Collaborative workspace with people working around a table'
+              className='w-full h-full object-cover'
+            />
+    
+            {/* Dark transparent overlay */}
+            <div className='absolute inset-0 bg-[#00000099]/60'></div>
+    
+            {/* Centered overlay content */}
+            <div className='absolute inset-0 flex flex-col items-center justify-center text-center text-white'>
+              {/* Logo icon */}
+              <Image
+                src='/logo.svg' // Replace with your blue "b" icon path
+                alt='Blueprint Logo'
+                height={90}
+                width={70}
+                className='mb-4'
+              />
+    
+              {/* Blueprint doc text */}
+              <div className='flex items-center'>
+                <Image
+                  src='/blueprint.png' // Replace with combined "Blueprint doc" text as SVG or style text directly
+                  alt='Blueprint doc text'
+                  height={70}
+                  width={250}
+                />
+              </div>
+    
+              {/* Powered by text */}
+              <p className='mt-4 absolute bottom-8 text-xs'>
+                Powered By: <span className='font-semibold'>AI Torney</span>
+              </p>
+            </div>
+          </div>
 
       {/* Right Side - Sign Up Form */}
       <div className='w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50'>
-        <div className='w-full max-w-md space-y-8'>
+        <div className='w-full max-w-md space-y-3'>
           {/* Logo and Header */}
           <div className='flex text-center flex-col items-center justify-center space-x-2'>
-            <div className='flex justify-center'>
-              <Image
-                src={"/logo.svg"}
-                alt='png'
-                height={100}
-                width={100}
-                className='w-[70px] mb-2 h-[90px] object-cover'
-              />
-            </div>
-            <Image
-              src={"/blueprint.svg"}
-              alt='png'
-              height={100}
-              width={100}
-              className='w-[250px] h-[60px] object-cover'
-            />
 
             <div className='space-y-2 '>
               <h1 className='text-4xl font-normal text-gray-900'>Sign Up</h1>
@@ -161,7 +175,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setForm({ ...form, fullName: e.target.value });
                   }}
-                  className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+                  className='mt-1 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
                 />
               </div>
 
@@ -180,7 +194,7 @@ export default function SignUpPage() {
                     setForm({ ...form, Email: e.target.value });
                   }}
                   placeholder='john@impresa.com'
-                  className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+                  className='mt-1 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
                 />
               </div>
 
@@ -200,7 +214,7 @@ export default function SignUpPage() {
                       setForm({ ...form, Password: e.target.value });
                     }}
                     placeholder='••••••••••••'
-                    className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+                    className='mt-1 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
                   />
                   <button
                     type='button'
@@ -232,7 +246,7 @@ export default function SignUpPage() {
                       setForm({ ...form, confirmPassword: e.target.value });
                     }}
                     placeholder='••••••••••••'
-                    className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+                    className='mt-1 h-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
                   />
                   <button
                     type='button'
@@ -248,7 +262,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              <Button className='w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium'>
+              <Button className='w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-medium'>
                 {isLoading ? (
                   <svg
                     className='animate-spin h-5 w-5 text-white'
@@ -289,12 +303,6 @@ export default function SignUpPage() {
               </Link>
             </div>
 
-            {/* Footer */}
-            <div className='text-center pt-4'>
-              <p className='text-xs text-gray-500'>
-                Powered By: <span className='font-medium'>AI Tomey</span>
-              </p>
-            </div>
           </div>
         </div>
       </div>

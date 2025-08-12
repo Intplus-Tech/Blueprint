@@ -5,18 +5,107 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Eye, EyeOff } from "lucide-react";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import Image from "next/image";
+import toast from "react-hot-toast";
+import axios from "axios";
+import { storeInSession } from "@/app/(auth)/components/session";
+import { UserContext } from "@/app/AppContext";
 
 export function AuthModal() {
   const [open, setOpen] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const { setUserAuth } = useContext(UserContext);
+  const [showconfirmPassword, setconfirmPassword] = useState(false);
+
   const [mode, setMode] = useState<"login" | "signup">("login");
   const isLogin = mode === "login";
+
+  const [form, setForm] = useState({
+    fullName: "",
+    Email: "",
+    Password: "",
+    confirmPassword: "",
+  });
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    if (form.Email.length < 1) {
+      toast.error("Update all fields");
+      setIsLoading(false);
+      return;
+    }
+    const details = {
+      password: form.Password,
+      email: form.Email,
+    };
+    console.log(details);
+
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/auth/login",
+        details
+      );
+      setIsLoading(false);
+      toast.success(data.msg);
+      storeInSession("user", JSON.stringify(data));
+      setUserAuth(data);
+      console.log(data);
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.msg || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      setIsLoading(false);
+    }
+  };
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    if (form.fullName.length < 1) {
+      toast.error("Update all fields");
+      setIsLoading(false);
+      return;
+    }
+    const details = {
+      username: form.fullName,
+      password: form.Password,
+      confirm_password: form.confirmPassword,
+      email: form.Email,
+    };
+    console.log(details);
+
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/auth/register",
+        details
+      );
+      setIsLoading(false);
+      toast.success(data.msg);
+      storeInSession("user", JSON.stringify(data));
+      setUserAuth(data);
+      console.log(data);
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.msg || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -25,16 +114,16 @@ export function AuthModal() {
           {isLogin ? "Log In" : "Sign Up"}
         </button>
       </DialogTrigger>
-      <DialogContent className='max-w-md h-screen overflow-auto bg-white text-gray-900 rounded-2xl border-0 p-8'>
+      <DialogContent className='min-w-[900px]  items-center flex  h-[96vh]  bg-white text-gray-900 rounded-2xl border-0 p-8'>
         <DialogHeader className='text-center space-y-2'>
           {/* Logo */}
-          <div className='flex justify-center'>
+          <div className='flex justify-center w-[400px]'>
             <Image
               src={"/logo.svg"}
               alt='png'
               height={100}
               width={100}
-              className='w-[70px] mb-2 h-[80px] object-cover'
+              className='w-[70px] mb-2 h-[86px] object-cover'
             />
           </div>
 
@@ -42,14 +131,14 @@ export function AuthModal() {
             {isLogin ? "Log in" : "Sign Up"}
           </DialogTitle>
 
-          <p className='text-gray-600 text-sm mx-auto'>
+          <p className='text-black text-sm mx-auto'>
             {isLogin
               ? "Welcome back! Please enter your details."
               : "Create your account to get started."}
           </p>
         </DialogHeader>
 
-        <div className='space-y-4 mt-6'>
+        <div className='space-y-2 mt-2'>
           {/* Google Sign In Button */}
           <Button
             variant='outline'
@@ -77,14 +166,14 @@ export function AuthModal() {
           </Button>
 
           {/* Divider */}
-          <div className='flex items-center my-6'>
+          <div className='flex items-center '>
             <div className='flex-1 border-t border-gray-300'></div>
             <span className='px-4 text-sm text-gray-500'>OR</span>
             <div className='flex-1 border-t border-gray-300'></div>
           </div>
 
           {/* Form Fields */}
-          <div className='space-y-4'>
+          <div className='space-y-2 min-w-[400px]'>
             {!isLogin && (
               <div>
                 <Label
@@ -95,8 +184,12 @@ export function AuthModal() {
                 </Label>
                 <Input
                   id='fullName'
+                  value={form.fullName}
+                  onChange={(e) => {
+                    setForm({ ...form, fullName: e.target.value });
+                  }}
                   placeholder='John Doe'
-                  className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  className='mt-1 h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                 />
               </div>
             )}
@@ -110,42 +203,77 @@ export function AuthModal() {
               </Label>
               <Input
                 id='email'
+                value={form.Email}
+                onChange={(e) => {
+                  setForm({ ...form, Email: e.target.value });
+                }}
                 type='email'
                 placeholder='john@impresa.com'
-                className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                className='mt-1 h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
               />
             </div>
 
-            <div>
+            <div className='relative'>
               <Label
-                htmlFor='password'
+                htmlFor='confirmPassword'
                 className='text-sm font-medium text-gray-700'
               >
                 Password
               </Label>
               <Input
                 id='password'
-                type='password'
+                type={!showOldPassword ? "text" : "password"}
+                value={form.Password}
+                onChange={(e) => {
+                  setForm({ ...form, Password: e.target.value });
+                }}
                 placeholder='••••••••••••'
-                className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
               />
+              <button
+                type='button'
+                onClick={() => setShowOldPassword(!showOldPassword)}
+                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+              >
+                {showOldPassword ? (
+                  <EyeOff className='h-4 w-4' />
+                ) : (
+                  <Eye className='h-4 w-4' />
+                )}
+              </button>
             </div>
 
             {!isLogin && (
-              <div>
-                <Label
-                  htmlFor='confirmPassword'
-                  className='text-sm font-medium text-gray-700'
-                >
-                  Confirm Password
-                </Label>
-                <Input
-                  id='confirmPassword'
-                  type='password'
-                  placeholder='••••••••••••'
-                  className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                />
-              </div>
+           
+            <div className='relative'>
+              <Label
+                htmlFor='confirmPassword'
+                className='text-sm font-medium text-gray-700'
+              >
+              Confirm  Password
+              </Label>
+              <Input
+                id='password'
+                type={showconfirmPassword ? "text" : "password"}
+                value={form.confirmPassword}
+                onChange={(e) => {
+                  setForm({ ...form, confirmPassword: e.target.value });
+                }}
+                placeholder='••••••••••••'
+                className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+              />
+              <button
+                type='button'
+                onClick={() => setconfirmPassword(!showconfirmPassword)}
+                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+              >
+                {showOldPassword ? (
+                  <EyeOff className='h-4 w-4' />
+                ) : (
+                  <Eye className='h-4 w-4' />
+                )}
+              </button>
+            </div>
             )}
 
             {isLogin && (
@@ -173,12 +301,40 @@ export function AuthModal() {
           </div>
 
           {/* Submit Button */}
-          <Button className='w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium mt-6'>
-            {isLogin ? "Log In" : "Create Account"}
+          <Button
+            onClick={isLogin ? handleLogin : handleSignup}
+            className='w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium mt-3'
+          >
+            {isLoading ? (
+              <svg
+                className='animate-spin h-5 w-5 text-white'
+                xmlns='http://www.w3.org/2000/svg'
+                fill='none'
+                viewBox='0 0 24 24'
+              >
+                <circle
+                  className='opacity-25'
+                  cx='12'
+                  cy='12'
+                  r='10'
+                  stroke='currentColor'
+                  strokeWidth='4'
+                />
+                <path
+                  className='opacity-75'
+                  fill='currentColor'
+                  d='M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z'
+                />
+              </svg>
+            ) : isLogin ? (
+              "Log In"
+            ) : (
+              "Create Account"
+            )}
           </Button>
 
           {/* Switch Mode */}
-          <div className='text-center mt-4'>
+          <div className='text-center mt-3'>
             <span className='text-sm text-gray-600'>
               {isLogin
                 ? "Don't have an account? "

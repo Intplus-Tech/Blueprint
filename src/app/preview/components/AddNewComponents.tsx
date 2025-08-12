@@ -1,14 +1,24 @@
 "use client";
 import Image from "next/image";
 import { AuthModal } from "./siginModal";
+import { useContext, useEffect } from "react";
+import { UserContext } from "@/app/AppContext";
 
 const AddNewComponents = () => {
-  const auth = true;
+  const { userAuth } = useContext(UserContext);
+
+  const access_token = userAuth?.access_token;
+  const auth = userAuth?.access_token ? true : false;
+  useEffect(() => {
+    if (access_token) {
+    }
+  }, [access_token]);
+
   return (
     <div>
       {auth ? (
         <>
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 py-1">
+          <div className='flex items-center gap-2 cursor-pointer hover:opacity-80 py-1'>
             {" "}
             <Image
               src={"/pc.svg"}
@@ -19,7 +29,7 @@ const AddNewComponents = () => {
             />{" "}
             My Device
           </div>
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 py-1">
+          <div className='flex items-center gap-2 cursor-pointer hover:opacity-80 py-1'>
             {" "}
             <Image
               src={"/drive.svg"}
@@ -29,28 +39,6 @@ const AddNewComponents = () => {
               className='w-[17px] h-[17px] object-cover'
             />{" "}
             Google Drive
-          </div>
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 py-1">
-            {" "}
-            <Image
-              src={"/one.svg"}
-              alt='png'
-              height={10}
-              width={10}
-              className='w-[17px] h-[17px] object-cover'
-            />{" "}
-            OneDrive
-          </div>
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 py-1">
-            {" "}
-            <Image
-              src={"/box.svg"}
-              alt='png'
-              height={10}
-              width={10}
-              className='w-[17px] h-[17px] object-cover'
-            />{" "}
-            Drop Box
           </div>
         </>
       ) : (

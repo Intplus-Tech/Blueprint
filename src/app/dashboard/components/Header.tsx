@@ -18,7 +18,7 @@ export default function Header() {
           alt='png'
           height={100}
           width={100}
-          className='w-[100px] mt-2 h-[30px] object-cover'
+          className='w-[120px] mt-2 h-[30px] object-cover'
         />
       </div>
 

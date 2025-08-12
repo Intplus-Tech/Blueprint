@@ -8,6 +8,7 @@ interface AppContextProps {
 
 type UserAuthType = {
   access_token: string;
+  csrf_token:string
 };
 
 type userContextType = {
