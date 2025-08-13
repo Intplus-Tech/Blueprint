@@ -64,9 +64,15 @@ export default function Component() {
 
       toast.success("success");
       router.push("/preview");
-    } catch (error) {
-      toast.dismiss(toastId);
+    } catch (error: unknown) {
       console.log(error);
+      toast.dismiss(toastId);
+
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
   const handleDeviceUploadForUser = async (
@@ -117,9 +123,15 @@ export default function Component() {
 
       toast.success("success");
       router.push("/preview");
-    } catch (error) {
-      toast.dismiss(toastId);
+    } catch (error: unknown) {
       console.log(error);
+      toast.dismiss(toastId);
+
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
   const handleDriveUploaad = () => {};

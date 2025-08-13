@@ -345,11 +345,12 @@ const addSignatureToPage = (e) => {
       console.error("Failed to generate PDF for download", err);
     }
   };
+  
   return (
     <div className='flex h-screen bg-gray-100'>
       {/* Header */}
       <div className='absolute top-0 left-0 right-0 bg-[#006FEE] text-white p-4 flex items-center justify-between z-10'>
-        <div onClick={()=> router.back()} className='flex items-center gap-2 hover:bg-blue-700 px-3 py-1 rounded'>
+        <div onClick={()=> router.push("/dashboard")} className='flex items-center gap-2 hover:bg-blue-700 px-3 py-1 rounded'>
         
             <ChevronLeft size={20} />
             Back

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Filter, Download, MoreVertical } from "lucide-react";
+import { Plus, Filter, Download, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { AddSignerModal } from "./AddSignerModal";
 import { ViewDetails } from "./ViewDetails";
@@ -74,8 +74,8 @@ const data: Document[] = [
         signed: "no",
       },
     ],
-    created: "21.03.2021",
-    lastActivity: "14.07.2021",
+    created: "2025-08-13T12:29:27.045033",
+    lastActivity: "2025-08-13T12:29:27.045033",
   },
   {
     id: 2,
@@ -104,12 +104,12 @@ const data: Document[] = [
         avatar: "/placeholder.svg?height=24&width=24",
       },
     ],
-    created: "21.03.2021",
-    lastActivity: "14.07.2021",
+    created: "2025-08-13T12:29:27.045033",
+    lastActivity: "2025-08-13T12:29:27.045033",
   },
   {
     id: 3,
-    documentId: "720472",
+    documentId: "7204732",
     documentName: "Sales Agreement.pdf",
     status: "expired",
     signers: [
@@ -134,39 +134,25 @@ const data: Document[] = [
         avatar: "/placeholder.svg?height=24&width=24",
       },
     ],
-    created: "21.03.2021",
-    lastActivity: "14.07.2021",
+    created: "2025-08-13T12:29:27.045033",
+    lastActivity: "2025-08-13T12:29:27.045033",
   },
-  {
-    id: 4,
-    documentId: "720472",
-    documentName: "Sales Agreement.pdf",
-    status: "expired",
+  // Add more data items to demonstrate pagination...
+  ...Array.from({ length: 47 }, (_, i) => ({
+    id: i + 4,
+    documentId: `${Math.floor(Math.random() * 9000000) + 1000000}`,
+    documentName: `Document_${i + 4}.pdf`,
+    status: ["pending", "signed", "expired"][Math.floor(Math.random() * 3)] as "pending" | "signed" | "expired",
     signers: [
       {
-        signed: "no",
-        name: "Busayo",
+        name: "User" + (i + 1),
         avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "no",
-        name: "James",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "yes",
-        name: "Gbemisola",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "yes",
-        name: "Gabriel",
-        avatar: "/placeholder.svg?height=24&width=24",
+        signed: Math.random() > 0.5 ? "yes" : "no",
       },
     ],
-    created: "21.03.2021",
-    lastActivity: "14.07.2021",
-  },
+    created: "2025-08-13T12:29:27.045033",
+    lastActivity: "2025-08-13T12:29:27.045033",
+  }))
 ];
 
 const getStatusColor = (status: string) => {
@@ -199,56 +185,107 @@ const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState(5);
   const { userAuth } = useContext(UserContext);
   const access_token = userAuth?.access_token;
   const [Documents, setDocuments] = useState<Document[]>([]);
-   const router = useRouter();
+  const router = useRouter();
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const fetchUserDocuments = async () => {
+    try {
+      const { data } = await axios.get(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/documents",
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+      console.log(data.documents);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const formattedData = data.documents.map((doc: any) => ({
+        documentName: doc.document_name,
+        documentId: doc.document_id,
+        status: doc.status,
+        signers: doc.signers,
+        created: doc.created_at,
+        lastActivity: doc.last_activity_at,
+        url: doc.file_url,
+      }));
+      setDocuments(formattedData);
+      console.log("fetched", formattedData);
+    } catch (error) {
+      toast.error("not success");
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
-    const fetchUserDocuments = async () => {
-      try {
-        const { data } = await axios.get(
-          process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/documents",
-          {
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-            },
-          }
-        );
-        console.log(data.documents);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const formattedData = data.documents.map((doc: any) => ({
-          documentName: doc.document_name,
-          documentId: doc.document_id,
-          status: doc.status,
-          signers: doc.signers,
-          created: doc.created_at,
-          lastActivity: doc.last_activity_at,
-          url: doc.file_url,
-        }));
-        setDocuments(formattedData);
-        console.log("fetched", formattedData);
-
-        toast.success("success");
-      } catch (error) {
-        toast.error("not success");
-        console.log(error);
-      }
-    };
     if (access_token) {
       fetchUserDocuments();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [access_token]);
 
   if (!isMounted) return null;
 
+  // Use Documents from API if available, otherwise fallback to static data
+  const currentData =  Documents;
+  
+  // Pagination calculations
+  const totalItems = currentData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = currentData.slice(startIndex, endIndex);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 7;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page
+      pages.push(1);
+      
+      if (currentPage > 3) {
+        pages.push('...');
+      }
+      
+      // Show current page and surrounding pages
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pages.push('...');
+      }
+      
+      // Show last page
+      if (totalPages > 1) {
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelected(Documents.map((item) => Number(item.documentId)));
+      setSelected(currentItems.map((item) => Number(item.documentId)));
     } else {
       setSelected([]);
     }
@@ -262,7 +299,23 @@ const DocumentTable = () => {
     }
   };
 
-  const pages = Array.from({ length: 10 }, (_, i) => i + 1);
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelected([]); // Clear selections when changing pages
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
   interface FormatDate {
     (dateString: string): string;
   }
@@ -270,242 +323,270 @@ const DocumentTable = () => {
   const formatDate: FormatDate = (dateString) => {
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // months are 0-based
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}.${month}.${year}`;
   };
+
   const viewDocument = (name: string, url: string) => {
     sessionStorage.setItem("UploadedFile", url);
     sessionStorage.setItem("UploadedFileName", name);
     router.push("/preview");
   };
+
+  const handleDocumentDeleted = () => {
+    fetchUserDocuments();
+  };
+
   return (
-    <div className='w-full  rounded-lg px-10 shadow-sm border border-gray-200'>
+    <div className='w-full rounded-lg shadow-sm border border-gray-200 bg-white'>
       {/* Header */}
-      <div className='flex items-center mt-3 justify-between border-b border-gray-200'>
-        <div className='flex items-center gap-4'>
-          <h1 className='text-2xl font-semibold text-gray-900'>Documents</h1>
+      <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6 border-b border-gray-200'>
+        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1'>
+          <h1 className='text-xl sm:text-2xl font-semibold text-gray-900'>Documents</h1>
           <Link href={"/"}>
-            <Button className='bg-[#268DE9] hover:bg-blue-700 text-white'>
+            <Button className='bg-[#268DE9] hover:bg-blue-700 text-white w-full sm:w-auto'>
               <Plus className='w-4 h-4 mr-2' />
               New Document
             </Button>
           </Link>
         </div>
-        <div className='flex items-center gap-2'>
-          <Button variant='outline' className='bg-transparent' size='sm'>
+        <div className='flex items-center gap-2 w-full sm:w-auto'>
+          <Button variant='outline' className='bg-transparent flex-1 sm:flex-none' size='sm'>
             <Filter className='w-4 h-4 mr-2' />
             Filter
           </Button>
-          <Button variant='outline' className='bg-transparent' size='sm'>
+          <Button variant='outline' className='bg-transparent flex-1 sm:flex-none' size='sm'>
             <Download className='w-4 h-4 mr-2' />
             Export
           </Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className='overflow-auto mt-7 bg-white px-6'>
-        <Table>
-          <TableHeader>
-            <TableRow className='border-b border-gray-200 text-black'>
-              <TableHead className='w-12'>
-                <Checkbox
-                  className='border-black'
-                  checked={selected.length === data.length}
-                  onCheckedChange={handleSelectAll}
-                />
-              </TableHead>
-              <TableHead className='text-black font-semibold'>
-                Document ID
-              </TableHead>
-              <TableHead className='text-black font-semibold'>
-                Document Name
-              </TableHead>
-              <TableHead className='text-black font-semibold'>Status</TableHead>
-              <TableHead className='text-black font-semibold'>
-                Signers
-              </TableHead>
-              <TableHead className='font-semibold bg-[#E3F2FE] text-blue-600'>
-                Created
-              </TableHead>
-              <TableHead className='text-black font-medium'>
-                Last Activity
-              </TableHead>
-              <TableHead className='w-12'></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Documents.map((item) => (
-              <TableRow
-                key={item.documentId}
-                className='border-b border-gray-100 hover:bg-gray-50'
-              >
-                <TableCell>
+      {/* Table Container with horizontal scroll */}
+      <div className='overflow-x-auto'>
+        <div className='min-w-[800px]'>
+          <Table>
+            <TableHeader>
+              <TableRow className='border-b border-gray-200 text-black'>
+                <TableHead className='w-12'>
                   <Checkbox
-                    className='border-[#636363]'
-                    checked={selected.includes(Number(item.documentId))}
-                    onCheckedChange={(checked) =>
-                      handleSelectItem(Number(item.documentId), checked as boolean)
-                    }
+                    className='border-black'
+                    checked={selected.length === currentItems.length && currentItems.length > 0}
+                    onCheckedChange={handleSelectAll}
                   />
-                </TableCell>
-                <TableCell className='text-[#636363]'>
-                  {item.documentId}
-                </TableCell>
-                <TableCell className='text-[#636363] font-medium'>
-                  {item.documentName}
-                </TableCell>
-                <TableCell>
-                  <div className='flex items-center gap-2'>
-                    <div
-                      className={`w-2 h-2 rounded-full ${getStatusColor(
-                        item.status
-                      )}`}
-                    ></div>
-                    <span className='text-gray-700'>
-                      {getStatusText(item.status)}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className='flex items-center gap-1'>
-                    {item.signers.map((signer, index) => (
-                      <div key={index} className='flex items-center gap-1'>
-                        <div className='w-6 h-6 rounded-full  flex items-center justify-center text-xs font-medium text-gray-600'>
-                          {signer.signed === "yes" ? (
-                            <Image
-                              src={"/tick.svg"}
-                              alt=''
-                              width={100}
-                              height={100}
-                              className='w-4 h-4'
-                            />
-                          ) : (
-                            <Image
-                              src={"/x.svg"}
-                              alt=''
-                              width={100}
-                              height={100}
-                              className='w-4 h-4'
-                            />
-                          )}
-                        </div>
-                        <span className='text-sm text-gray-600'>
-                          {signer.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className='text-[#636363]'>
-                  {formatDate(item.created)}
-                </TableCell>
-                <TableCell className='text-[#636363]'>
-                  {formatDate(item.lastActivity)}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                        <MoreVertical className='h-4 w-4' />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end' className='w-48'>
-                      <DropdownMenuItem
-                        className='text-[#333333]'
-                        onClick={() =>
-                          viewDocument(item.documentName, item.url ?? "")
-                        }
-                      >
-                        Open Document
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className='text-[#333333]'>
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <AddSignerModal />
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className='text-[#333333]'>
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <ViewDetails />
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className='text-[#333333]'>
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <ResendModal />
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className='text-[#333333]'>
-                        Download (PDF)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className='text-red-600'>
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <DeleteModal />
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                </TableHead>
+                <TableHead className='text-black font-semibold'>
+                  Document ID
+                </TableHead>
+                <TableHead className='text-black font-semibold'>
+                  Document Name
+                </TableHead>
+                <TableHead className='text-black font-semibold'>Status</TableHead>
+                <TableHead className='text-black font-semibold'>
+                  Signers
+                </TableHead>
+                <TableHead className='font-semibold bg-[#E3F2FE] text-blue-600'>
+                  Created
+                </TableHead>
+                <TableHead className='text-black font-medium'>
+                  Last Activity
+                </TableHead>
+                <TableHead className='w-12'></TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {currentItems.map((item) => (
+                <TableRow
+                  key={item.documentId}
+                  className='border-b border-gray-100 hover:bg-gray-50'
+                >
+                  <TableCell>
+                    <Checkbox
+                      className='border-[#636363]'
+                      checked={selected.includes(Number(item.documentId))}
+                      onCheckedChange={(checked) =>
+                        handleSelectItem(Number(item.documentId), checked as boolean)
+                      }
+                    />
+                  </TableCell>
+                  <TableCell className='text-[#636363]'>
+                    {item.documentId}
+                  </TableCell>
+                  <TableCell className='text-[#636363] font-medium'>
+                    <div className='max-w-[200px] truncate' title={item.documentName}>
+                      {item.documentName}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className='flex items-center gap-2'>
+                      <div
+                        className={`w-2 h-2 rounded-full ${getStatusColor(
+                          item.status
+                        )}`}
+                      ></div>
+                      <span className='text-gray-700 text-sm'>
+                        {getStatusText(item.status)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className='flex items-center gap-1 flex-wrap'>
+                      {item.signers.slice(0, 3).map((signer, index) => (
+                        <div key={index} className='flex items-center gap-1'>
+                          <div className='w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
+                            {signer.signed === "yes" ? (
+                              <Image
+                                src={"/tick.svg"}
+                                alt=''
+                                width={16}
+                                height={16}
+                                className='w-4 h-4'
+                              />
+                            ) : (
+                              <Image
+                                src={"/x.svg"}
+                                alt=''
+                                width={16}
+                                height={16}
+                                className='w-4 h-4'
+                              />
+                            )}
+                          </div>
+                          <span className='text-sm text-gray-600 max-w-[80px] truncate'>
+                            {signer.name}
+                          </span>
+                        </div>
+                      ))}
+                      {item.signers.length > 3 && (
+                        <span className='text-xs text-gray-500'>+{item.signers.length - 3} more</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className='text-[#636363] text-sm'>
+                    {formatDate(item.created)}
+                  </TableCell>
+                  <TableCell className='text-[#636363] text-sm'>
+                    {formatDate(item.lastActivity)}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+                          <MoreVertical className='h-4 w-4' />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align='end' className='w-48'>
+                        <DropdownMenuItem
+                          className='text-[#333333]'
+                          onClick={() =>
+                            viewDocument(item.documentName, item.url ?? "")
+                          }
+                        >
+                          Open Document
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className='text-[#333333]'>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <AddSignerModal />
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className='text-[#333333]'>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <ViewDetails documentId={item.documentId} />
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className='text-[#333333]'>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <ResendModal />
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className='text-[#333333]'>
+                          Download (PDF)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className='text-red-600'>
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <DeleteModal documentId={item.documentId} onDelete={handleDocumentDeleted} />
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className='flex absolute bottom-0 right-100 items-center justify-center gap-2 p-4 border-t border-gray-200'>
-        <Button variant='ghost' size='sm' disabled>
-          Prev 10
-        </Button>
-        <div className='flex items-center gap-1'>
-          {pages.slice(0, 10).map((page) => (
+      {/* Enhanced Pagination */}
+      {totalPages > 1 && (
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200'>
+          {/* Results info */}
+          <div className='text-sm text-gray-600 order-2 sm:order-1'>
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
+          </div>
+          
+          {/* Pagination controls */}
+          <div className='flex items-center gap-2 order-1 sm:order-2'>
             <Button
-              key={page}
-              variant={page === currentPage ? "default" : "ghost"}
+              variant='outline'
               size='sm'
-              className={`w-8 h-8 p-0 ${
-                page === currentPage
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-              onClick={() => setCurrentPage(page)}
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+              className='flex items-center gap-1'
             >
-              {page}
+              <ChevronLeft className='w-4 h-4' />
+              <span className='hidden sm:inline'>Previous</span>
             </Button>
-          ))}
-          <span className='text-gray-400 px-2'>...</span>
-          {pages.slice(10, 20).map((page) => (
+            
+            <div className='flex items-center gap-1'>
+              {getPageNumbers().map((page, index) => (
+                <div key={index}>
+                  {page === '...' ? (
+                    <span className='px-2 py-1 text-gray-400'>...</span>
+                  ) : (
+                    <Button
+                      variant={page === currentPage ? "default" : "ghost"}
+                      size='sm'
+                      className={`w-8 h-8 p-0 ${
+                        page === currentPage
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handlePageChange(page as number)}
+                    >
+                      {page}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            
             <Button
-              key={page}
-              variant={page === currentPage ? "default" : "ghost"}
+              variant='outline'
               size='sm'
-              className={`w-8 h-8 p-0 ${
-                page === currentPage
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-              onClick={() => setCurrentPage(page)}
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className='flex items-center gap-1'
             >
-              {page}
+              <span className='hidden sm:inline'>Next</span>
+              <ChevronRight className='w-4 h-4' />
             </Button>
-          ))}
+          </div>
         </div>
-        <Button variant='ghost' size='sm'>
-          Next 10
-        </Button>
-      </div>
+      )}
     </div>
   );
 };

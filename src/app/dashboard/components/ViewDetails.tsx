@@ -11,9 +11,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import {  Mail, Plus, Check } from "lucide-react";
-
+import { useContext, useEffect, useState } from "react";
+import { Mail, Plus, Check } from "lucide-react";
+import axios from "axios";
+import { UserContext } from "@/app/AppContext";
+ interface FormatDate {
+    (dateString: string): string;
+  }
 interface Signer {
   id: number;
   name: string;
@@ -31,36 +35,62 @@ interface DocumentDetails {
   signers: Signer[];
 }
 
-const mockDocument: DocumentDetails = {
-  name: "Sales Agreement.pdf",
-  type: "PDF",
-  size: "145.8 KB",
-  createdBy: "2025-07-21 03:54",
-  createdDate: "2025-07-21 03:54",
-  signers: [
-    {
-      id: 1,
-      name: "You (Alex)",
-      email: "",
-      status: "signed",
-      signedDate: "2025-07-21 03:54",
-    },
-    {
-      id: 2,
-      name: "Busayo Ajim",
-      email: "busayoajim@gmail.com",
-      status: "signed",
-      signedDate: "2025-07-21 03:54",
-    },
-  ],
-};
 
-export function ViewDetails() {
+interface DocumentId {
+  documentId: string;
+}
+export function ViewDetails({ documentId }: DocumentId) {
   const [open, setOpen] = useState(false);
   const [showNewSignerForm, setShowNewSignerForm] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const { userAuth } = useContext(UserContext);
+  const access_token = userAuth?.access_token;
+  const [details, setDetails] = useState<DocumentDetails>({
+  name: "",
+  type: "",
+  size: "",
+  createdBy: "",
+  createdDate: "",
+  signers: []
+});;
+  const fetchDocumentDetails = async () => {
+    try {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/document/${documentId}`,
+
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+      const formattedData = {
+        name: data?.document.document_name,
+        type: data?.document.document_type,
+        size: data?.document.document_size,
+        createdBy: data?.document.created_at,
+        createdDate: data?.document.created_by,
+        signers: data?.document.signers,
+      };
+      setDetails(formattedData);
+      console.log(formattedData);
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        console.log(error.response?.data?.msg || "Something went wrong");
+      } else {
+        console.log("An unexpected error occurred");
+      }
+    }
+  };
+  useEffect(() => {
+    if (documentId) {
+      fetchDocumentDetails();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,9 +111,13 @@ export function ViewDetails() {
     setEmail("");
     setShowNewSignerForm(false);
   };
-
-
-
+ const formatDate: FormatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -93,7 +127,7 @@ export function ViewDetails() {
         {/* Header */}
         <DialogHeader className='flex flex-row items-center justify-between px-6 py-2  border-b border-gray-100'>
           <DialogTitle className='text-lg font-semibold text-gray-900'>
-            {mockDocument.name}
+            {details.name}
           </DialogTitle>
         </DialogHeader>
 
@@ -105,29 +139,31 @@ export function ViewDetails() {
             </h3>
             <div className='space-y-3 text-sm'>
               <div>
-                <span className='text-gray-600'>Document Name</span>
-                <div className='text-gray-900'>{mockDocument.name}</div>
+                <span className='text-gray-900'>Document Name</span>
+                <div className='text-gray-600'>{details.name}</div>
               </div>
               <div>
-                <span className='text-gray-600'>Type</span>
-                <div className='text-gray-900'>{mockDocument.type}</div>
+                <span className='text-gray-900'>Type</span>
+                <div className='text-gray-600'>{details.type}</div>
               </div>
               <div>
-                <span className='text-gray-600'>Size</span>
-                <div className='text-gray-900'>{mockDocument.size}</div>
+                <span className='text-gray-900'>Size</span>
+                <div className='text-gray-600'>{details.size}</div>
               </div>
               <div>
-                <span className='text-gray-600'>Created By</span>
-                <div className='text-gray-900'>{mockDocument.createdBy}</div>
+                <span className='text-gray-900'>Created By</span>
+                <div className='text-gray-600'>{formatDate(details.createdBy)}</div>
               </div>
             </div>
           </div>
 
           {/* Signers Section */}
           <div className='px-6 pb-4'>
-            <h3 className='text-sm font-medium border-b-[#D4D4D4] text-gray-900 mb-3'>Signer</h3>
+            <h3 className='text-sm font-medium border-b-[#D4D4D4] text-gray-900 mb-3'>
+              Signer
+            </h3>
             <div className='space-y-3'>
-              {mockDocument.signers.map((signer) => (
+              {details.signers.map((signer) => (
                 <div
                   key={signer.id}
                   className='flex items-center justify-between'
