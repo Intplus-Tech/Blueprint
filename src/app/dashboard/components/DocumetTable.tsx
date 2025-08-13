@@ -17,7 +17,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Filter, Download, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Filter,
+  Download,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Image from "next/image";
 import { AddSignerModal } from "./AddSignerModal";
 import { ViewDetails } from "./ViewDetails";
@@ -142,7 +149,10 @@ const data: Document[] = [
     id: i + 4,
     documentId: `${Math.floor(Math.random() * 9000000) + 1000000}`,
     documentName: `Document_${i + 4}.pdf`,
-    status: ["pending", "signed", "expired"][Math.floor(Math.random() * 3)] as "pending" | "signed" | "expired",
+    status: ["pending", "signed", "expired"][Math.floor(Math.random() * 3)] as
+      | "pending"
+      | "signed"
+      | "expired",
     signers: [
       {
         name: "User" + (i + 1),
@@ -152,7 +162,7 @@ const data: Document[] = [
     ],
     created: "2025-08-13T12:29:27.045033",
     lastActivity: "2025-08-13T12:29:27.045033",
-  }))
+  })),
 ];
 
 const getStatusColor = (status: string) => {
@@ -180,7 +190,39 @@ const getStatusText = (status: string) => {
       return status;
   }
 };
+async function downloadFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to download");
 
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename || "download";
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error(err);
+    toast.error("Download failed");
+  }
+}
+
+
+// // Example usage in a React button
+// export default function App() {
+//   const fileUrl = "https://example.com/sample.pdf";
+
+//   return (
+//     <button onClick={() => downloadFile(fileUrl, "myFile.pdf")}>
+//       Download PDF
+//     </button>
+//   );
+// }
 const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -229,14 +271,14 @@ const DocumentTable = () => {
     if (access_token) {
       fetchUserDocuments();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [access_token]);
 
   if (!isMounted) return null;
 
   // Use Documents from API if available, otherwise fallback to static data
-  const currentData =  Documents;
-  
+  const currentData = Documents;
+
   // Pagination calculations
   const totalItems = currentData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -248,7 +290,7 @@ const DocumentTable = () => {
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisiblePages = 7;
-    
+
     if (totalPages <= maxVisiblePages) {
       // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
@@ -257,29 +299,29 @@ const DocumentTable = () => {
     } else {
       // Show first page
       pages.push(1);
-      
+
       if (currentPage > 3) {
-        pages.push('...');
+        pages.push("...");
       }
-      
+
       // Show current page and surrounding pages
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
-      
+
       if (currentPage < totalPages - 2) {
-        pages.push('...');
+        pages.push("...");
       }
-      
+
       // Show last page
       if (totalPages > 1) {
         pages.push(totalPages);
       }
     }
-    
+
     return pages;
   };
 
@@ -343,7 +385,9 @@ const DocumentTable = () => {
       {/* Header */}
       <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6 border-b border-gray-200'>
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1'>
-          <h1 className='text-xl sm:text-2xl font-semibold text-gray-900'>Documents</h1>
+          <h1 className='text-xl sm:text-2xl font-semibold text-gray-900'>
+            Documents
+          </h1>
           <Link href={"/"}>
             <Button className='bg-[#268DE9] hover:bg-blue-700 text-white w-full sm:w-auto'>
               <Plus className='w-4 h-4 mr-2' />
@@ -352,11 +396,19 @@ const DocumentTable = () => {
           </Link>
         </div>
         <div className='flex items-center gap-2 w-full sm:w-auto'>
-          <Button variant='outline' className='bg-transparent flex-1 sm:flex-none' size='sm'>
+          <Button
+            variant='outline'
+            className='bg-transparent flex-1 sm:flex-none'
+            size='sm'
+          >
             <Filter className='w-4 h-4 mr-2' />
             Filter
           </Button>
-          <Button variant='outline' className='bg-transparent flex-1 sm:flex-none' size='sm'>
+          <Button
+            variant='outline'
+            className='bg-transparent flex-1 sm:flex-none'
+            size='sm'
+          >
             <Download className='w-4 h-4 mr-2' />
             Export
           </Button>
@@ -372,7 +424,10 @@ const DocumentTable = () => {
                 <TableHead className='w-12'>
                   <Checkbox
                     className='border-black'
-                    checked={selected.length === currentItems.length && currentItems.length > 0}
+                    checked={
+                      selected.length === currentItems.length &&
+                      currentItems.length > 0
+                    }
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
@@ -382,7 +437,9 @@ const DocumentTable = () => {
                 <TableHead className='text-black font-semibold'>
                   Document Name
                 </TableHead>
-                <TableHead className='text-black font-semibold'>Status</TableHead>
+                <TableHead className='text-black font-semibold'>
+                  Status
+                </TableHead>
                 <TableHead className='text-black font-semibold'>
                   Signers
                 </TableHead>
@@ -406,7 +463,10 @@ const DocumentTable = () => {
                       className='border-[#636363]'
                       checked={selected.includes(Number(item.documentId))}
                       onCheckedChange={(checked) =>
-                        handleSelectItem(Number(item.documentId), checked as boolean)
+                        handleSelectItem(
+                          Number(item.documentId),
+                          checked as boolean
+                        )
                       }
                     />
                   </TableCell>
@@ -414,7 +474,10 @@ const DocumentTable = () => {
                     {item.documentId}
                   </TableCell>
                   <TableCell className='text-[#636363] font-medium'>
-                    <div className='max-w-[200px] truncate' title={item.documentName}>
+                    <div
+                      className='max-w-[200px] truncate'
+                      title={item.documentName}
+                    >
                       {item.documentName}
                     </div>
                   </TableCell>
@@ -459,7 +522,9 @@ const DocumentTable = () => {
                         </div>
                       ))}
                       {item.signers.length > 3 && (
-                        <span className='text-xs text-gray-500'>+{item.signers.length - 3} more</span>
+                        <span className='text-xs text-gray-500'>
+                          +{item.signers.length - 3} more
+                        </span>
                       )}
                     </div>
                   </TableCell>
@@ -472,7 +537,11 @@ const DocumentTable = () => {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-8 w-8 p-0'
+                        >
                           <MoreVertical className='h-4 w-4' />
                         </Button>
                       </DropdownMenuTrigger>
@@ -509,7 +578,12 @@ const DocumentTable = () => {
                             <ResendModal />
                           </div>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className='text-[#333333]'>
+                        <DropdownMenuItem
+                          className='text-[#333333]'
+                          onClick={() =>
+                            downloadFile(item.url ?? '', item.documentName)
+                          }
+                        >
                           Download (PDF)
                         </DropdownMenuItem>
                         <DropdownMenuItem className='text-red-600'>
@@ -517,7 +591,10 @@ const DocumentTable = () => {
                             onClick={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                           >
-                            <DeleteModal documentId={item.documentId} onDelete={handleDocumentDeleted} />
+                            <DeleteModal
+                              documentId={item.documentId}
+                              onDelete={handleDocumentDeleted}
+                            />
                           </div>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -535,9 +612,10 @@ const DocumentTable = () => {
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200'>
           {/* Results info */}
           <div className='text-sm text-gray-600 order-2 sm:order-1'>
-            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
+            {totalItems} results
           </div>
-          
+
           {/* Pagination controls */}
           <div className='flex items-center gap-2 order-1 sm:order-2'>
             <Button
@@ -550,11 +628,11 @@ const DocumentTable = () => {
               <ChevronLeft className='w-4 h-4' />
               <span className='hidden sm:inline'>Previous</span>
             </Button>
-            
+
             <div className='flex items-center gap-1'>
               {getPageNumbers().map((page, index) => (
                 <div key={index}>
-                  {page === '...' ? (
+                  {page === "..." ? (
                     <span className='px-2 py-1 text-gray-400'>...</span>
                   ) : (
                     <Button
@@ -573,7 +651,7 @@ const DocumentTable = () => {
                 </div>
               ))}
             </div>
-            
+
             <Button
               variant='outline'
               size='sm'
