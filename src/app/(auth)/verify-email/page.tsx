@@ -1,13 +1,14 @@
 "use client";
 
 import axios from "axios";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react"; // Import Suspense
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-export default function VerifyEmail() {
+// Create a component to use useSearchParams and useRouter
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const email = searchParams.get("email");
@@ -16,7 +17,7 @@ export default function VerifyEmail() {
   const [isLoading, setIsLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
 
-  const handleVerify = async (e: React.MouseEvent) => {
+  const handleVerify = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!token || !email) {
       toast.error("Missing token or email.");
@@ -31,8 +32,8 @@ export default function VerifyEmail() {
         { token, email }
       );
       toast.success(data.msg || "Email verified successfully!");
-      router.push("/login");
       setIsVerified(true);
+      router.push("/login");
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.msg || "Verification failed");
@@ -45,12 +46,12 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gray-50 px-4'>
-      <div className='max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center'>
-        <h1 className='text-2xl font-bold mb-4'>Verify Your Email</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">Verify Your Email</h1>
         {email && (
-          <p className='text-gray-600 mb-6'>
-            You&apos;re verifying <span className='font-medium'>{email}</span>
+          <p className="text-gray-600 mb-6">
+            You&apos;re verifying <span className="font-medium">{email}</span>
           </p>
         )}
 
@@ -68,7 +69,7 @@ export default function VerifyEmail() {
         >
           {isLoading ? (
             <>
-              <Loader2 className='animate-spin h-5 w-5' />
+              <Loader2 className="animate-spin h-5 w-5" />
               Verifying...
             </>
           ) : isVerified ? (
@@ -79,5 +80,14 @@ export default function VerifyEmail() {
         </button>
       </div>
     </div>
+  );
+}
+
+// Wrap the component in Suspense
+export default function VerifyEmail() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
