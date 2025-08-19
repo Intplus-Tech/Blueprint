@@ -488,7 +488,7 @@ const DocumentTable = () => {
                   </TableCell>
                   <TableCell className='text-[#636363] font-medium'>
                     <div
-                      className='max-w-[200px] truncate'
+                      className='max-w-[130px] truncate'
                       title={item.documentName}
                     >
                       {item.documentName}
@@ -507,7 +507,7 @@ const DocumentTable = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className='flex items-center gap-1  w-[100px] md:w-full overflow-auto'>
+                    <div className='flex items-center gap-1  w-[200px] md:w-full overflow-auto'>
                       {item.signers.slice(0, 8).map((signer, index) => (
                         <div key={index} className='flex items-center gap-1'>
                           <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
