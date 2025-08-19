@@ -39,7 +39,7 @@ export default function Header() {
       </div>
 
       {/* Middle: Search Bar */}
-      <div className='flex-1 px-8'>
+      <div className=' px-8 hidden md:flex-1'>
         <div className='w-full max-w-md mx-auto relative'>
           <input
             type='text'

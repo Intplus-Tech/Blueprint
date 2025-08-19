@@ -80,7 +80,7 @@ const PDFViewer = () => {
   // Adjust scale for mobile
   useEffect(() => {
     if (isMobile) {
-      setScale(1.2); // Smaller scale for mobile
+      setScale(1.4); // Smaller scale for mobile
     } else {
       setScale(1.8); // Original scale for desktop
     }
@@ -200,13 +200,54 @@ const PDFViewer = () => {
       return;
     }
 
-    e.preventDefault();
-    e.stopPropagation();
+    // Handle both mouse and touch events properly
+    if (e.preventDefault) {
+      try {
+        e.preventDefault();
+      } catch (error) {
+        // Ignore preventDefault errors for passive listeners
+        console.log("preventDefault failed (passive listener)");
+      }
+    }
+
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+
+    // Handle both mouse and touch events
+    let clientX, clientY;
+
+    if (e.type === "touchstart" || e.type === "touchend") {
+      // For touch events
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e.changedTouches && e.changedTouches.length > 0) {
+        // For touchend events, touches array might be empty
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      } else {
+        console.error("No touch coordinates available");
+        return;
+      }
+    } else {
+      // For mouse events
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    if (isNaN(clientX) || isNaN(clientY)) {
+      console.error("Invalid coordinates:", { clientX, clientY });
+      return;
+    }
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    console.log("Touch/Click coordinates:", { clientX, clientY, x, y, rect });
 
     const newSignature = {
       id: Date.now(),
@@ -214,7 +255,7 @@ const PDFViewer = () => {
       y,
       page: currentPage,
       data: currentSignature,
-      width: isMobile ? 150 : 200, // Smaller signatures on mobile
+      width: isMobile ? 150 : 200,
       height: isMobile ? 82 : 110,
     };
 
@@ -228,42 +269,82 @@ const PDFViewer = () => {
   };
 
   // Drag handlers with touch support
-  const handleMouseDown = (e, signature) => {
+ // Updated drag handlers with better touch support
+const handleMouseDown = (e, signature) => {
+  try {
     e.preventDefault();
+  } catch (error) {
+    // Ignore preventDefault errors for passive listeners
+  }
+  
+  if (e.stopPropagation) {
     e.stopPropagation();
+  }
 
-    const rect = overlayRef.current.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  const rect = overlayRef.current.getBoundingClientRect();
+  
+  // Handle both mouse and touch events
+  let clientX, clientY;
+  
+  if (e.type === 'touchstart') {
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      return;
+    }
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
 
-    const offsetX = clientX - rect.left - (signature.x - signature.width / 2);
-    const offsetY = clientY - rect.top - (signature.y - signature.height / 2);
+  if (isNaN(clientX) || isNaN(clientY)) {
+    return;
+  }
 
-    setDraggedSignature(signature);
-    setDragOffset({ x: offsetX, y: offsetY });
-    setIsDragging(true);
-  };
+  const offsetX = clientX - rect.left - (signature.x - signature.width / 2);
+  const offsetY = clientY - rect.top - (signature.y - signature.height / 2);
 
-  const handleMouseMove = (e) => {
-    if (!isDragging || !draggedSignature || !overlayRef.current) return;
+  setDraggedSignature(signature);
+  setDragOffset({ x: offsetX, y: offsetY });
+  setIsDragging(true);
+};
 
-    const rect = overlayRef.current.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+const handleMouseMove = (e) => {
+  if (!isDragging || !draggedSignature || !overlayRef.current) return;
 
-    const newX =
-      clientX - rect.left - dragOffset.x + draggedSignature.width / 2;
-    const newY =
-      clientY - rect.top - dragOffset.y + draggedSignature.height / 2;
+  const rect = overlayRef.current.getBoundingClientRect();
+  
+  // Handle both mouse and touch events
+  let clientX, clientY;
+  
+  if (e.type === 'touchmove') {
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      return;
+    }
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
 
-    setSignatures((prev) =>
-      prev.map((sig) =>
-        sig.id === draggedSignature.id ? { ...sig, x: newX, y: newY } : sig
-      )
-    );
+  if (isNaN(clientX) || isNaN(clientY)) {
+    return;
+  }
 
-    setDraggedSignature((prev) => ({ ...prev, x: newX, y: newY }));
-  };
+  const newX = clientX - rect.left - dragOffset.x + draggedSignature.width / 2;
+  const newY = clientY - rect.top - dragOffset.y + draggedSignature.height / 2;
+
+  setSignatures((prev) =>
+    prev.map((sig) =>
+      sig.id === draggedSignature.id ? { ...sig, x: newX, y: newY } : sig
+    )
+  );
+
+  setDraggedSignature((prev) => ({ ...prev, x: newX, y: newY }));
+};
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -401,46 +482,44 @@ const PDFViewer = () => {
       console.error("Failed to generate PDF for download", err);
     }
   };
-const handleSaveSignature = async () => {
-  const documentId = sessionStorage.getItem("documentId");
-  if (!signatures.length) {
-    toast.error("No signature to save");
-    return;
-  }
+  const handleSaveSignature = async () => {
+    const documentId = sessionStorage.getItem("documentId");
+    if (!signatures.length) {
+      toast.error("No signature to save");
+      return;
+    }
 
-  // pick last placed signature
-  const signature = signatures[signatures.length - 1]; 
+    // pick last placed signature
+    const signature = signatures[signatures.length - 1];
 
-  const payload = {
-    signature_base64: signature.data.data, // base64 string
-    page_number: signature.page,
-    pos_x: signature.x,
-    pos_y: signature.y,
-    width: signature.width,
-    height: signature.height,
+    const payload = {
+      signature_base64: signature.data.data, // base64 string
+      page_number: signature.page,
+      pos_x: signature.x,
+      pos_y: signature.y,
+      width: signature.width,
+      height: signature.height,
+    };
+    console.log(payload);
+
+    try {
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/sign`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      toast.success("Document Signed successfully!");
+      console.log("Signed PDF URL:", data);
+    } catch (err) {
+      console.log(err);
+      toast.error(err?.response.data.error||"Something went wrong");
+    }
   };
-console.log(payload);
-
-  try {
-    const { data } = await axios.post(
-      `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/sign`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    toast.success("Signed successfully!");
-    console.log("Signed PDF URL:", data.cloudinary_url);
-  } catch (err) {
-    console.error(err);
-    toast.error("Something went wrong");
-  }
-};
-
-
 
   return (
     <div className='flex h-screen bg-gray-100 relative'>
@@ -572,7 +651,7 @@ console.log(payload);
       )}
 
       {/* Main PDF Area */}
-      <div className='flex-1 flex flex-col'>
+      <div className='flex-1 flex flex-col mt-[70px] md:mt-0'>
         {/* Tools Bar */}
         {pdfDoc && (
           <div
@@ -580,7 +659,7 @@ console.log(payload);
             bg-[#323639] border rounded-xl text-white p-2 md:p-3 flex items-center z-20
             ${
               isMobile
-                ? "fixed top-20 -right-14 transform -translate-x-1/2 w-auto max-w-[calc(100vw-2rem)]"
+                ? "fixed top-30 -right-14 transform -translate-x-1/2 w-auto max-w-[calc(100vw-2rem)]"
                 : "absolute right-5 top-20 w-[250px]"
             }
           `}
@@ -776,8 +855,19 @@ console.log(payload);
                 ref={canvasRef}
                 className='shadow-lg border border-gray-300 bg-white max-w-full h-auto'
                 onClick={currentSignature ? addSignatureToPage : undefined}
-                onTouchStart={currentSignature ? addSignatureToPage : undefined}
-                style={{ cursor: currentSignature ? "crosshair" : "" }}
+                onTouchStart={
+                  currentSignature
+                    ? (e) => {
+                        // Prevent default touch behavior like scrolling
+                        e.preventDefault();
+                        addSignatureToPage(e);
+                      }
+                    : undefined
+                }
+                style={{
+                  cursor: currentSignature ? "crosshair" : "",
+                  touchAction: currentSignature ? "none" : "auto", // Prevent default touch behaviors
+                }}
               />
 
               {/* Signature Overlay */}
@@ -790,51 +880,63 @@ console.log(payload);
                     currentSignature && !isDragging ? "none" : "auto",
                 }}
               >
-                {signatures
-                  .filter((sig) => sig.page === currentPage)
-                  .map((sig) => (
-                    <div
-                      key={sig.id}
-                      className={`absolute group select-none ${
-                        isDragging && draggedSignature?.id === sig.id
-                          ? "cursor-grabbing"
-                          : "cursor-grab hover:ring-2 hover:ring-blue-400"
-                      }`}
-                      style={{
-                        left: sig.x - sig.width / 2,
-                        top: sig.y - sig.height / 2,
-                        width: sig.width,
-                        height: sig.height,
-                        pointerEvents: "auto",
-                      }}
-                      onMouseDown={(e) => handleMouseDown(e, sig)}
-                      onTouchStart={(e) => handleMouseDown(e, sig)}
-                    >
-                      <img
-                        src={sig.data.data}
-                        alt='Signature'
-                        className='w-full h-full object-cover pointer-events-none'
-                        draggable={false}
-                      />
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeSignature(sig.id);
-                        }}
-                        className={`
-                          absolute -top-2 -right-1 text-xl font-bold bg-white rounded-full 
-                          flex items-center justify-center shadow-md transition-opacity
-                          text-red-500 hover:text-red-700 cursor-pointer
-                          opacity-0 group-hover:opacity-100
-                          ${isMobile ? "w-8 h-8" : "w-6 h-6"}
-                        `}
-                        style={{ pointerEvents: "auto" }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+              {signatures
+  .filter((sig) => sig.page === currentPage)
+  .map((sig) => (
+    <div
+      key={sig.id}
+      className={`absolute group select-none ${
+        isDragging && draggedSignature?.id === sig.id
+          ? "cursor-grabbing"
+          : "cursor-grab hover:ring-2 hover:ring-blue-400"
+      }`}
+      style={{
+        left: sig.x - sig.width / 2,
+        top: sig.y - sig.height / 2,
+        width: sig.width,
+        height: sig.height,
+        pointerEvents: "auto",
+        touchAction: "none", // Prevent default touch behaviors
+      }}
+      onMouseDown={(e) => handleMouseDown(e, sig)}
+      onTouchStart={(e) => {
+        e.preventDefault(); // Prevent scrolling
+        handleMouseDown(e, sig);
+      }}
+    >
+      <img
+        src={sig.data.data}
+        alt='Signature'
+        className='w-full h-full object-cover pointer-events-none'
+        draggable={false}
+      />
+      {/* Delete button */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          removeSignature(sig.id);
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          removeSignature(sig.id);
+        }}
+        className={`
+          absolute -top-2 -right-1 text-xl font-bold bg-white rounded-full 
+          flex items-center justify-center shadow-md transition-opacity
+          text-red-500 hover:text-red-700 cursor-pointer
+          opacity-0 group-hover:opacity-100
+          ${isMobile ? "w-8 h-8" : "w-6 h-6"}
+        `}
+        style={{ 
+          pointerEvents: "auto",
+          touchAction: "manipulation" // Allow touch but prevent other gestures
+        }}
+      >
+        ×
+      </button>
+    </div>
+  ))}
               </div>
 
               {/* Status Messages */}

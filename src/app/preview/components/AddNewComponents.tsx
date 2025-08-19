@@ -5,7 +5,6 @@ import { useContext, useEffect, useRef } from "react";
 import { UserContext } from "@/app/AppContext";
 import toast from "react-hot-toast";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 
 const AddNewComponents = () => {
   const { userAuth } = useContext(UserContext);
@@ -13,7 +12,6 @@ const AddNewComponents = () => {
   const access_token = userAuth?.access_token;
   const auth = userAuth?.access_token ? true : false;
   const csrf_token = userAuth?.csrf_token;
-  const router = useRouter()
   useEffect(() => {
     if (access_token) {
     }
@@ -47,7 +45,7 @@ const AddNewComponents = () => {
           },
         }
       );
-    window.location.reload();
+      window.location.reload();
       console.log(data.url);
       sessionStorage.setItem("UploadedFile", data.url);
       sessionStorage.setItem("UploadedFileName", file.name);
@@ -102,6 +100,7 @@ const AddNewComponents = () => {
       console.log(data);
       sessionStorage.setItem("UploadedFile", data.url);
       sessionStorage.setItem("UploadedFileName", file.name);
+      sessionStorage.setItem("documentId", data.document_id);
       toast.dismiss(toastId);
 
       toast.success("success");
