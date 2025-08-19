@@ -57,7 +57,7 @@ export default function Component() {
           },
         }
       );
-      console.log(data.url);
+      console.log(data);
       sessionStorage.setItem("UploadedFile", data.url);
       sessionStorage.setItem("UploadedFileName", file.name);
       toast.dismiss(toastId);
@@ -119,6 +119,8 @@ export default function Component() {
       console.log(data);
       sessionStorage.setItem("UploadedFile", data.url);
       sessionStorage.setItem("UploadedFileName", file.name);
+      sessionStorage.setItem("documentId", data.document_id);
+
       toast.dismiss(toastId);
 
       toast.success("success");

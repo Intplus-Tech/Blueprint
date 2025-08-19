@@ -191,7 +191,8 @@ export default function AddSignature({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Enhanced text rendering for smoother appearance
-    ctx.font = "32px cursive";
+    ctx.font = "32px 'Brush Script MT', 'Lucida Handwriting', cursive";
+
     ctx.fillStyle = "#000000";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -377,7 +378,7 @@ export default function AddSignature({
             </div>
             <div className='bg-blue-50 rounded-lg p-4'>
               <div className='bg-white rounded border-b-2 border-gray-400 p-4 text-center'>
-                <div className='text-2xl font-cursive text-gray-800'>
+                <div className='text-2xl  text-gray-800' style={{ fontFamily: "'Great Vibes', cursive" }}>
                   {userName}
                 </div>
               </div>
@@ -468,7 +469,7 @@ export default function AddSignature({
                           </div>
                         </div>
                       </div>
-                      <div className='flex space-x-2'>
+                      <div className='flex ml-3 space-x-2'>
                         <Button
                           onClick={() => selectSignature(signature)}
                           size='sm'
