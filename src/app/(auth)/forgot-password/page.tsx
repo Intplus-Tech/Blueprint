@@ -18,6 +18,8 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+      setIsLoading(true);
+
     // Handle forgot password logic here
     try {
       const { data } = await axios.post(
@@ -147,6 +149,7 @@ export default function ForgotPasswordPage() {
 
           <Button
             type='submit'
+            disabled={isLoading}
             className='w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium'
           >
             Send Reset Link

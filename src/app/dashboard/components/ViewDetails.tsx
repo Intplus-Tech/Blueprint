@@ -15,9 +15,11 @@ import { useContext, useEffect, useState } from "react";
 import { Mail, Plus, Check } from "lucide-react";
 import axios from "axios";
 import { UserContext } from "@/app/AppContext";
- interface FormatDate {
-    (dateString: string): string;
-  }
+import toast from "react-hot-toast";
+import Image from "next/image";
+interface FormatDate {
+  (dateString: string): string;
+}
 interface Signer {
   id: number;
   name: string;
@@ -35,11 +37,11 @@ interface DocumentDetails {
   signers: Signer[];
 }
 
-
 interface DocumentId {
   documentId: string;
+  onDelete?: () => void;
 }
-export function ViewDetails({ documentId }: DocumentId) {
+export function ViewDetails({ documentId, onDelete }: DocumentId) {
   const [open, setOpen] = useState(false);
   const [showNewSignerForm, setShowNewSignerForm] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -47,14 +49,16 @@ export function ViewDetails({ documentId }: DocumentId) {
   const [email, setEmail] = useState("");
   const { userAuth } = useContext(UserContext);
   const access_token = userAuth?.access_token;
+  const [isLoading, setIsLoading] = useState(false);
+
   const [details, setDetails] = useState<DocumentDetails>({
-  name: "",
-  type: "",
-  size: "",
-  createdBy: "",
-  createdDate: "",
-  signers: []
-});;
+    name: "",
+    type: "",
+    size: "",
+    createdBy: "",
+    createdDate: "",
+    signers: [],
+  });
   const fetchDocumentDetails = async () => {
     try {
       const { data } = await axios.get(
@@ -92,12 +96,41 @@ export function ViewDetails({ documentId }: DocumentId) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log({ firstName, lastName, email });
-
     // Reset form and hide it
+    setIsLoading(true);
+
+    try {
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/signers`,
+        {
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+
+      toast.success(data.message);
+      setIsLoading(false);
+      if (onDelete) onDelete();
+      setOpen(false);
+    } catch (error: unknown) {
+      setIsLoading(false);
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        console.log(error.response?.data?.msg || "Something went wrong");
+        toast.error("Something went wrong");
+      } else {
+        console.log("An unexpected error occurred");
+      }
+    }
+    // Reset form
     setFirstName("");
     setLastName("");
     setEmail("");
@@ -111,7 +144,7 @@ export function ViewDetails({ documentId }: DocumentId) {
     setEmail("");
     setShowNewSignerForm(false);
   };
- const formatDate: FormatDate = (dateString) => {
+  const formatDate: FormatDate = (dateString) => {
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -152,7 +185,9 @@ export function ViewDetails({ documentId }: DocumentId) {
               </div>
               <div>
                 <span className='text-gray-900'>Created By</span>
-                <div className='text-gray-600'>{formatDate(details.createdBy)}</div>
+                <div className='text-gray-600'>
+                  {formatDate(details.createdBy)}
+                </div>
               </div>
             </div>
           </div>
@@ -163,11 +198,8 @@ export function ViewDetails({ documentId }: DocumentId) {
               Signer
             </h3>
             <div className='space-y-3'>
-              {details.signers.map((signer) => (
-                <div
-                  key={signer.id}
-                  className='flex items-center justify-between'
-                >
+              {details.signers.map((signer, i) => (
+                <div key={i} className='flex items-center justify-between'>
                   <div>
                     <div className='text-sm text-gray-900'>{signer.name}</div>
                     {signer.email && (
@@ -177,8 +209,26 @@ export function ViewDetails({ documentId }: DocumentId) {
                     )}
                   </div>
                   <div className='flex items-center gap-2'>
-                    <Check className='h-4 w-4 text-green-500' />
-                    <span className='text-sm text-gray-600'>Signed</span>
+                    {signer.status === "signed" ? (
+                      <Image
+                        src={"/tick.svg"}
+                        alt=''
+                        width={16}
+                        height={16}
+                        className='w-4 h-4'
+                      />
+                    ) : (
+                      <Image
+                        src={"/x.svg"}
+                        alt=''
+                        width={16}
+                        height={16}
+                        className='w-4 h-4'
+                      />
+                    )}
+                    <span className='text-sm text-gray-600'>
+                      {signer.status}
+                    </span>
                     {signer.signedDate && (
                       <span className='text-xs text-gray-400'>
                         {signer.signedDate}
@@ -280,7 +330,30 @@ export function ViewDetails({ documentId }: DocumentId) {
                       size='sm'
                       className='px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white'
                     >
-                      Send Invite
+                      {isLoading ? (
+                        <svg
+                          className='animate-spin h-5 w-5 text-white'
+                          xmlns='http://www.w3.org/2000/svg'
+                          fill='none'
+                          viewBox='0 0 24 24'
+                        >
+                          <circle
+                            className='opacity-25'
+                            cx='12'
+                            cy='12'
+                            r='10'
+                            stroke='currentColor'
+                            strokeWidth='4'
+                          />
+                          <path
+                            className='opacity-75'
+                            fill='currentColor'
+                            d='M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z'
+                          />
+                        </svg>
+                      ) : (
+                        "Send Invite"
+                      )}
                     </Button>
                   </div>
                 </form>

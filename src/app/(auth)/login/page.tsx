@@ -16,18 +16,18 @@ import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [rememberPassword, setRememberPassword] = useState(false);
-  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(true);
+  const [showOldPassword, setShowOldPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const { userAuth, setUserAuth } = useContext(UserContext);
   const router = useRouter();
-  const access_token = userAuth?.access_token;
+  const isVerified = userAuth?.user?.is_verified;
 
-  useEffect(() => {
-    if (access_token) {
+ useEffect(() => {
+    if (isVerified) {
       router.push("/dashboard");
     }
-  }, [access_token, router]);
+  },[isVerified,router]);
   const [form, setForm] = useState({
     Email: "",
     Password: "",

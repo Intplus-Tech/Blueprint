@@ -1,7 +1,23 @@
+import { removeFromSession } from "@/app/(auth)/components/session";
+import { UserContext } from "@/app/AppContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Bell, LogOut, Settings } from "lucide-react";
 import Image from "next/image";
+import { useContext } from "react";
+import toast from "react-hot-toast";
 
 export default function Header() {
+  const { setUserAuth } = useContext(UserContext);
+  const handleLogout = () => {
+    removeFromSession("user");
+    toast.success("Log Out Successful");
+   setUserAuth(null)
+  };
   return (
     <header className='w-full h-16 bg-white shadow-sm flex items-center justify-between px-10'>
       {/* Left: Logo */}
@@ -50,8 +66,19 @@ export default function Header() {
             3
           </span>
         </div>
-
-        <LogOut className='w-5 h-5 text-red-500 cursor-pointer' />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            asChild
+            className='border-none focus:outline-none'
+          >
+            <LogOut className='w-5 h-5 text-red-500 cursor-pointer' />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleLogout}>
+              <p className=' text-red-500 cursor-pointer'>Log Out</p>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

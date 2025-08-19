@@ -83,7 +83,7 @@ export default function Component() {
       return;
     }
     console.log("for logged user");
-    
+
     const file = files[0];
     console.log(file);
     const formData = new FormData();
@@ -160,26 +160,37 @@ export default function Component() {
                 alt='png'
                 height={100}
                 width={100}
-                className='w-[170px] h-[50px] object-cover'
+                className='w-[110px] h-[30px]  md:w-[170px] md:h-[50px] object-cover'
               />
             </span>
           </div>
 
-          <nav className='flex items-center space-x-6'>
-            <Link
-              href='/signup'
-              className='text-white/80 hover:text-white transition-colors'
-            >
-              Sign Up
-            </Link>
-            <span className='text-white/60'>/</span>
-            <Link
-              href='/signin'
-              className='text-white/80 hover:text-white transition-colors'
-            >
-              Sign In
-            </Link>
-          </nav>
+          {!access_token ? (
+            <nav className='flex items-center space-x-3 md:space-x-6'>
+              <Link
+                href='/signup'
+                className='text-white/80 hover:text-white hover:underline transition-colors'
+              >
+                Sign Up
+              </Link>
+              <span className='text-white/60'>/</span>
+              <Link
+                href='/login'
+                className='text-white/80 hover:underline hover:text-white transition-colors'
+              >
+                Sign In
+              </Link>
+            </nav>
+          ) : (
+            <nav className='flex items-center space-x-3 md:space-x-6'>
+              <Link
+                href='/dashboard'
+                className='text-white/80 hover:text-white hover:underline transition-colors'
+              >
+               Dashboard
+              </Link>
+            </nav>
+          )}
         </header>
 
         {/* Main Content */}
@@ -275,7 +286,7 @@ export default function Component() {
               © 2025 Torney.cc. All Rights Reserved
             </div>
 
-            <nav className='flex items-center space-x-8 text-sm'>
+            <nav className='flex items-center space-x-3 md:space-x-8 md:text-sm text-[10px]'>
               <Link
                 href='/pricing'
                 className='text-white/60 hover:text-white transition-colors'

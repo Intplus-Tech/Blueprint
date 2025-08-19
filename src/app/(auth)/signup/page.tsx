@@ -15,12 +15,12 @@ import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
   const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showconfirmPassword, setconfirmPassword] = useState(false);
+  const [showconfirmPassword, setconfirmPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false); // Loading state
   const router = useRouter();
 
   const { userAuth, setUserAuth } = useContext(UserContext);
-  const access_token = userAuth?.access_token;
+  const isVerified = userAuth?.user?.is_verified;
   const [form, setForm] = useState({
     fullName: "",
     Email: "",
@@ -64,10 +64,10 @@ export default function SignUpPage() {
     }
   };
   useEffect(() => {
-    if (access_token) {
+    if (isVerified) {
       router.push("/dashboard");
     }
-  },[access_token,router]);
+  },[isVerified,router]);
   return (
     <div className='h-screen flex'>
         {/* Left Side - Image */}
@@ -115,7 +115,6 @@ export default function SignUpPage() {
         <div className='w-full max-w-md space-y-3'>
           {/* Logo and Header */}
           <div className='flex text-center flex-col items-center justify-center space-x-2'>
-
             <div className='space-y-2 '>
               <h1 className='text-4xl font-normal text-gray-900'>Sign Up</h1>
               <p className='text-gray-600'>
@@ -208,7 +207,7 @@ export default function SignUpPage() {
                 <div className='relative'>
                   <Input
                     id='password'
-                    type={!showOldPassword ? "text" : "password"}
+                    type={showOldPassword ? "text" : "password"}
                     value={form.Password}
                     onChange={(e) => {
                       setForm({ ...form, Password: e.target.value });
@@ -221,7 +220,7 @@ export default function SignUpPage() {
                     onClick={() => setShowOldPassword(!showOldPassword)}
                     className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
                   >
-                    {showOldPassword ? (
+                    {!showOldPassword ? (
                       <EyeOff className='h-4 w-4' />
                     ) : (
                       <Eye className='h-4 w-4' />
@@ -285,7 +284,7 @@ export default function SignUpPage() {
                     />
                   </svg>
                 ) : (
-                  "Log In"
+                  "Sign Up"
                 )}
               </Button>
             </form>

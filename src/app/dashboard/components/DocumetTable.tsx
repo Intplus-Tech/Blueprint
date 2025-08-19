@@ -212,30 +212,43 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
+function useScreenWidth() {
+  const [width, setWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
 
-// // Example usage in a React button
-// export default function App() {
-//   const fileUrl = "https://example.com/sample.pdf";
+  useEffect(() => {
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-//   return (
-//     <button onClick={() => downloadFile(fileUrl, "myFile.pdf")}>
-//       Download PDF
-//     </button>
-//   );
-// }
+  return width;
+}
+
+
+
 const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage] = useState(5);
   const { userAuth } = useContext(UserContext);
   const access_token = userAuth?.access_token;
   const [Documents, setDocuments] = useState<Document[]>([]);
   const router = useRouter();
+  const width = useScreenWidth();
+  const [itemsPerPage, setItemsPerPage] = useState(10); // default
 
+  useEffect(() => {
+    if (width < 768) {
+      setItemsPerPage(10); // small devices (mobile/tablet)
+    } else {
+      setItemsPerPage(5); // laptop/desktop
+    }
+  }, [width]);
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  
 
   const fetchUserDocuments = async () => {
     try {
@@ -262,7 +275,7 @@ const DocumentTable = () => {
       setDocuments(formattedData);
       console.log("fetched", formattedData);
     } catch (error) {
-      toast.error("not success");
+      toast.error("fetching Documents failed");
       console.log(error);
     }
   };
@@ -389,7 +402,7 @@ const DocumentTable = () => {
             Documents
           </h1>
           <Link href={"/"}>
-            <Button className='bg-[#268DE9] hover:bg-blue-700 text-white w-full sm:w-auto'>
+            <Button className='bg-[#268DE9] cursor-pointer hover:bg-blue-700 text-white w-full sm:w-auto'>
               <Plus className='w-4 h-4 mr-2' />
               New Document
             </Button>
@@ -494,10 +507,10 @@ const DocumentTable = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className='flex items-center gap-1 flex-wrap'>
-                      {item.signers.slice(0, 3).map((signer, index) => (
+                    <div className='flex items-center gap-1  w-[100px] md:w-full overflow-auto'>
+                      {item.signers.slice(0, 8).map((signer, index) => (
                         <div key={index} className='flex items-center gap-1'>
-                          <div className='w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
+                          <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
                             {signer.signed === "yes" ? (
                               <Image
                                 src={"/tick.svg"}
@@ -516,14 +529,14 @@ const DocumentTable = () => {
                               />
                             )}
                           </div>
-                          <span className='text-sm text-gray-600 max-w-[80px] truncate'>
+                          <span className='text-sm md:text-[14px] text-gray-600 max-w-[80px] truncate'>
                             {signer.name}
                           </span>
                         </div>
                       ))}
-                      {item.signers.length > 3 && (
+                      {item.signers.length > 8 && (
                         <span className='text-xs text-gray-500'>
-                          +{item.signers.length - 3} more
+                          +{item.signers.length - 8} more
                         </span>
                       )}
                     </div>
@@ -559,7 +572,7 @@ const DocumentTable = () => {
                             onClick={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                           >
-                            <AddSignerModal />
+                            <AddSignerModal documentId={item.documentId}  onDelete={handleDocumentDeleted}/>
                           </div>
                         </DropdownMenuItem>
                         <DropdownMenuItem className='text-[#333333]'>
@@ -567,7 +580,7 @@ const DocumentTable = () => {
                             onClick={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                           >
-                            <ViewDetails documentId={item.documentId} />
+                            <ViewDetails documentId={item.documentId} onDelete={handleDocumentDeleted}/>
                           </div>
                         </DropdownMenuItem>
                         <DropdownMenuItem className='text-[#333333]'>
