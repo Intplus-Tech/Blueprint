@@ -651,7 +651,7 @@ const handleMouseMove = (e) => {
       )}
 
       {/* Main PDF Area */}
-      <div className='flex-1 flex flex-col mt-[70px] md:mt-0'>
+      <div className='flex-1 flex flex-col mt-[50px] md:mt-0 bg-[#CDD1D8]'>
         {/* Tools Bar */}
         {pdfDoc && (
           <div
@@ -659,7 +659,7 @@ const handleMouseMove = (e) => {
             bg-[#323639] border rounded-xl text-white p-2 md:p-3 flex items-center z-20
             ${
               isMobile
-                ? "fixed top-30 -right-14 transform -translate-x-1/2 w-auto max-w-[calc(100vw-2rem)]"
+                ? "fixed top-22 -right-14 transform -translate-x-1/2 w-auto max-w-[calc(100vw-2rem)]"
                 : "absolute right-5 top-20 w-[250px]"
             }
           `}
