@@ -86,7 +86,7 @@ export function AddSignerModal({ documentId, onDelete }: DocumentId) {
       <DialogTrigger asChild>
         <p>Add Signer</p>
       </DialogTrigger>
-      <DialogContent className='max-w-md bg-white text-gray-900 rounded-lg border p-0'>
+      <DialogContent className='w-[350px] md:w-full bg-white text-gray-900 rounded-lg border p-0'>
         {/* Header */}
         <DialogHeader className='flex flex-row items-center justify-between p-6 pb-4'>
           <DialogTitle className='text-lg font-semibold text-gray-900'>

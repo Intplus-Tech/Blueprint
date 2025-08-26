@@ -21,7 +21,7 @@ interface Signer {
   email: string;
   status: string;
   signedDate?: string;
-  isCurrentUser?: boolean;
+  is_owner?: boolean;
 }
 
 interface DocumentId {
@@ -40,13 +40,13 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
   const { userAuth } = useContext(UserContext);
   const access_token = userAuth?.access_token;
 
-  const handleResendInvite =async  (name: string, email: string) => {
+  const handleResendInvite = async (name: string, email: string) => {
     setIsLoading(true);
 
     // Handle resend invite logic here
     const [firstName, lastName] = name.split(" ");
 
-     try {
+    try {
       const { data } = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/signers`,
         {
@@ -126,58 +126,63 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
     setShowNewSignerForm(false);
   };
   const getSignerLabel = (signer: Signer, index: number) => {
-    if (index===0) return signer.name + " (You)";
+    if (signer.is_owner) return signer.name + " (You)";
     return `Signer ${index + 1}`;
   };
 
- const resendDetails = async () => {
-  try {
-    const { data } = await axios.get(
-      `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/resend`,
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+  const resendDetails = async () => {
+    try {
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/resend`,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+
+      interface ResendApiItem {
+        name: string;
+        email: string;
+        signed_at?: string | null;
+        status: string;
+        is_owner: boolean;
       }
-    );
 
-    interface ResendApiItem {
-      name: string;
-      email: string;
-      signed_at?: string | null;
-      status: string;
+      interface FormattedSigner {
+        id: number;
+        name: string;
+        email: string;
+        signedDate: string;
+        status: string;
+        is_owner: boolean;
+      }
+
+      // Map over data.signers, not data
+      const formattedData: FormattedSigner[] = (
+        data.signers as ResendApiItem[]
+      ).map(
+        (item: ResendApiItem, index: number): FormattedSigner => ({
+          id: index + 1, // generate id since backend doesn’t give a unique one
+          name: item.name,
+          email: item.email,
+          signedDate: item.signed_at ?? "Not signed yet",
+          status: item.status,
+          is_owner: item.is_owner,
+        })
+      );
+
+      setDetails(formattedData);
+      console.log(formattedData, "data from resends");
+    } catch (error: unknown) {
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        console.log(error.response?.data?.msg || "Something went wrong");
+      } else {
+        console.log("An unexpected error occurred");
+      }
     }
-
-    interface FormattedSigner {
-      id: number;
-      name: string;
-      email: string;
-      signedDate: string;
-      status: string;
-    }
-
-    // Map over data.signers, not data
-    const formattedData: FormattedSigner[] = (data.signers as ResendApiItem[]).map(
-      (item: ResendApiItem, index: number): FormattedSigner => ({
-        id: index + 1, // generate id since backend doesn’t give a unique one
-        name: item.name,
-        email: item.email,
-        signedDate: item.signed_at ?? "Not signed yet",
-        status: item.status,
-      })
-    );
-
-    setDetails(formattedData);
-    console.log(formattedData, "data from resends");
-  } catch (error: unknown) {
-    console.log(error);
-    if (axios.isAxiosError(error)) {
-      console.log(error.response?.data?.msg || "Something went wrong");
-    } else {
-      console.log("An unexpected error occurred");
-    }
-  }
-};
+  };
 
   useEffect(() => {
     if (documentId) {
@@ -185,6 +190,17 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId]);
+  interface FormatDate {
+    (dateString: string): string;
+  }
+  const formatDate: FormatDate = (dateString) => {
+    if (dateString == "Not signed yet") return "Not signed yet";
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -243,20 +259,44 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
                       </div>
 
                       <div className='flex items-center gap-2'>
-                        {signer.status !== "signed" && index !== 0 && (
+                        {signer.status !== "signed" && !signer.is_owner && (
                           <Button
                             size='sm'
+                            disabled={isLoading}
                             onClick={() =>
                               handleResendInvite(signer.name, signer.email)
                             }
                             className='bg-[#268DE9] w-[70px] md:w-[150px] hover:bg-blue-700 text-white text-[10px] md:text-xs px-3 py-1'
                           >
-                            Resend Invite
+                            {isLoading ? (
+                              <svg
+                                className='animate-spin h-5 w-5 text-white'
+                                xmlns='http://www.w3.org/2000/svg'
+                                fill='none'
+                                viewBox='0 0 24 24'
+                              >
+                                <circle
+                                  className='opacity-25'
+                                  cx='12'
+                                  cy='12'
+                                  r='10'
+                                  stroke='currentColor'
+                                  strokeWidth='4'
+                                />
+                                <path
+                                  className='opacity-75'
+                                  fill='currentColor'
+                                  d='M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z'
+                                />
+                              </svg>
+                            ) : (
+                              " Resend Invite"
+                            )}
                           </Button>
                         )}
                         {signer.signedDate && (
                           <span className='text-xs text-gray-400'>
-                            {signer.signedDate}
+                            {formatDate(signer.signedDate)}
                           </span>
                         )}
                         {signer.status === "not_signed" &&
@@ -356,6 +396,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
                     </Button>
                     <Button
                       type='submit'
+                      disabled={isLoading}
                       size='sm'
                       className='px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white'
                     >

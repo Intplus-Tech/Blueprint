@@ -40,7 +40,7 @@ interface Signer {
   name: string;
   avatar: string;
   signed: string;
-  status:string
+  status: string;
 }
 
 interface Document {
@@ -61,7 +61,7 @@ const getStatusColor = (status: string) => {
       return "bg-orange-500";
     case "Pending (You)":
       return "bg-orange-500";
-    case "signed":
+    case "Signed":
       return "bg-green-500";
     case "Expired":
       return "bg-red-500";
@@ -121,6 +121,7 @@ function useScreenWidth() {
 const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const { userAuth } = useContext(UserContext);
   const access_token = userAuth?.access_token;
@@ -142,6 +143,7 @@ const DocumentTable = () => {
   }, []);
 
   const fetchUserDocuments = async () => {
+    setIsLoading(true);
     try {
       const { data } = await axios.get(
         process.env.NEXT_PUBLIC_SERVER_DOMAIN + "/api/documents",
@@ -164,8 +166,12 @@ const DocumentTable = () => {
         url: doc.new_updated_url,
       }));
       setDocuments(formattedData);
+      setIsLoading(false);
+
       console.log("fetched", formattedData);
     } catch (error) {
+      setIsLoading(false);
+
       toast.error("fetching Documents failed");
       console.log(error);
     }
@@ -360,15 +366,28 @@ const DocumentTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentItems.length == 0 ? (
-       <TableRow>
-      <TableCell colSpan={8} className="py-10 h-[300px]">
-        <div className="flex flex-col items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700"></div>
-          <span className="mt-2 text-sm text-gray-600">Loading documents...</span>
-        </div>
-      </TableCell>
-    </TableRow>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className='py-10 h-[300px]'>
+                    <div className='flex flex-col items-center justify-center'>
+                      <div className='h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700'></div>
+                      <span className='mt-2 text-sm text-gray-600'>
+                        Loading documents...
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : currentItems.length == 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className='py-10 h-[330px]'>
+                    <div className='flex flex-col items-center justify-center'>
+                     
+                      <span className='mt-2 text-sm text-gray-600'>
+                       You dont have any Documents....
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : (
                 currentItems.map((item) => (
                   <TableRow

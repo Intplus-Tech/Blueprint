@@ -24,8 +24,9 @@ interface Signer {
   id: number;
   name: string;
   email: string;
-  status: "signed" | "pending";
+  status: "Signed" | "pending";
   signedDate?: string;
+  is_owner:boolean
 }
 
 interface DocumentDetails {
@@ -79,7 +80,7 @@ export function ViewDetails({ documentId, onDelete }: DocumentId) {
         signers: data?.document.signers,
       };
       setDetails(formattedData);
-      console.log(formattedData);
+      console.log(data,"data from view details");
     } catch (error: unknown) {
       console.log(error);
       if (axios.isAxiosError(error)) {
@@ -201,7 +202,7 @@ export function ViewDetails({ documentId, onDelete }: DocumentId) {
               {details.signers.map((signer, i) => (
                 <div key={i} className='flex items-center justify-between'>
                   <div>
-                    <div className='text-sm text-gray-900'>{signer.name}</div>
+                    <div className='text-sm text-gray-900'>{signer.name}{signer.is_owner && " (You)"}</div>
                     {signer.email && (
                       <div className='text-xs text-gray-500'>
                         {signer.email}
@@ -209,7 +210,7 @@ export function ViewDetails({ documentId, onDelete }: DocumentId) {
                     )}
                   </div>
                   <div className='flex items-center gap-2'>
-                    {signer.status === "signed" ? (
+                    {signer.status === "Signed" ? (
                       <Image
                         src={"/tick.svg"}
                         alt=''
