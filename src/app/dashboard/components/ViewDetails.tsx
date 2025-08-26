@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useContext, useEffect, useState } from "react";
-import { Mail, Plus, Check } from "lucide-react";
+import { Mail, Plus } from "lucide-react";
 import axios from "axios";
 import { UserContext } from "@/app/AppContext";
 import toast from "react-hot-toast";

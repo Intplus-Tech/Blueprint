@@ -40,6 +40,7 @@ interface Signer {
   name: string;
   avatar: string;
   signed: string;
+  status:string
 }
 
 interface Document {
@@ -50,128 +51,19 @@ interface Document {
   signers: Signer[];
   created: string;
   lastActivity: string;
-  url?: string;
+  url: string;
+  file_url: string;
 }
-
-const data: Document[] = [
-  {
-    id: 1,
-    documentId: "144532",
-    documentName: "Sales Agreement.pdf",
-    status: "pending",
-    signers: [
-      {
-        name: "Busayo",
-        avatar: "/placeholder.svg?height=24&width=24",
-        signed: "no",
-      },
-      {
-        name: "James",
-        avatar: "/placeholder.svg?height=24&width=24",
-        signed: "no",
-      },
-      {
-        name: "Gbemisola",
-        avatar: "/placeholder.svg?height=24&width=24",
-        signed: "yes",
-      },
-      {
-        name: "Gabriel",
-        avatar: "/placeholder.svg?height=24&width=24",
-        signed: "no",
-      },
-    ],
-    created: "2025-08-13T12:29:27.045033",
-    lastActivity: "2025-08-13T12:29:27.045033",
-  },
-  {
-    id: 2,
-    documentId: "335645",
-    documentName: "NDA_Template.pdf",
-    status: "signed",
-    signers: [
-      {
-        signed: "yes",
-        name: "Busayo",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "no",
-        name: "James",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "no",
-        name: "Gbemisola",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "no",
-        name: "Gabriel",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-    ],
-    created: "2025-08-13T12:29:27.045033",
-    lastActivity: "2025-08-13T12:29:27.045033",
-  },
-  {
-    id: 3,
-    documentId: "7204732",
-    documentName: "Sales Agreement.pdf",
-    status: "expired",
-    signers: [
-      {
-        signed: "no",
-        name: "Busayo",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "yes",
-        name: "James",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "yes",
-        name: "Gbemisola",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-      {
-        signed: "no",
-        name: "Gabriel",
-        avatar: "/placeholder.svg?height=24&width=24",
-      },
-    ],
-    created: "2025-08-13T12:29:27.045033",
-    lastActivity: "2025-08-13T12:29:27.045033",
-  },
-  // Add more data items to demonstrate pagination...
-  ...Array.from({ length: 47 }, (_, i) => ({
-    id: i + 4,
-    documentId: `${Math.floor(Math.random() * 9000000) + 1000000}`,
-    documentName: `Document_${i + 4}.pdf`,
-    status: ["pending", "signed", "expired"][Math.floor(Math.random() * 3)] as
-      | "pending"
-      | "signed"
-      | "expired",
-    signers: [
-      {
-        name: "User" + (i + 1),
-        avatar: "/placeholder.svg?height=24&width=24",
-        signed: Math.random() > 0.5 ? "yes" : "no",
-      },
-    ],
-    created: "2025-08-13T12:29:27.045033",
-    lastActivity: "2025-08-13T12:29:27.045033",
-  })),
-];
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "pending":
       return "bg-orange-500";
+    case "Pending (You)":
+      return "bg-orange-500";
     case "signed":
       return "bg-green-500";
-    case "expired":
+    case "Expired":
       return "bg-red-500";
     default:
       return "bg-gray-500";
@@ -213,7 +105,9 @@ async function downloadFile(url: string, filename: string) {
 }
 
 function useScreenWidth() {
-  const [width, setWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 0);
+  const [width, setWidth] = useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 0
+  );
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -223,8 +117,6 @@ function useScreenWidth() {
 
   return width;
 }
-
-
 
 const DocumentTable = () => {
   const [selected, setSelected] = useState<number[]>([]);
@@ -244,11 +136,10 @@ const DocumentTable = () => {
       setItemsPerPage(5); // laptop/desktop
     }
   }, [width]);
-  
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
 
   const fetchUserDocuments = async () => {
     try {
@@ -270,7 +161,7 @@ const DocumentTable = () => {
         signers: doc.signers,
         created: doc.created_at,
         lastActivity: doc.last_activity_at,
-        url: doc.file_url,
+        url: doc.new_updated_url,
       }));
       setDocuments(formattedData);
       console.log("fetched", formattedData);
@@ -383,9 +274,12 @@ const DocumentTable = () => {
     return `${day}.${month}.${year}`;
   };
 
-  const viewDocument = (name: string, url: string) => {
+  const viewDocument = (name: string, url: string, id: string) => {
+    console.log(url, "url");
+
     sessionStorage.setItem("UploadedFile", url);
     sessionStorage.setItem("UploadedFileName", name);
+    sessionStorage.setItem("documentId", id);
     router.push("/preview");
   };
 
@@ -466,155 +360,179 @@ const DocumentTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentItems.map((item) => (
-                <TableRow
-                  key={item.documentId}
-                  className='border-b border-gray-100 hover:bg-gray-50'
-                >
-                  <TableCell>
-                    <Checkbox
-                      className='border-[#636363]'
-                      checked={selected.includes(Number(item.documentId))}
-                      onCheckedChange={(checked) =>
-                        handleSelectItem(
-                          Number(item.documentId),
-                          checked as boolean
-                        )
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className='text-[#636363]'>
-                    {item.documentId}
-                  </TableCell>
-                  <TableCell className='text-[#636363] font-medium'>
-                    <div
-                      className='max-w-[130px] truncate'
-                      title={item.documentName}
-                    >
-                      {item.documentName}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className='flex items-center gap-2'>
+              {currentItems.length == 0 ? (
+       <TableRow>
+      <TableCell colSpan={8} className="py-10 h-[300px]">
+        <div className="flex flex-col items-center justify-center">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700"></div>
+          <span className="mt-2 text-sm text-gray-600">Loading documents...</span>
+        </div>
+      </TableCell>
+    </TableRow>
+              ) : (
+                currentItems.map((item) => (
+                  <TableRow
+                    key={item.documentId}
+                    className='border-b border-gray-100 hover:bg-gray-50'
+                  >
+                    <TableCell>
+                      <Checkbox
+                        className='border-[#636363]'
+                        checked={selected.includes(Number(item.documentId))}
+                        onCheckedChange={(checked) =>
+                          handleSelectItem(
+                            Number(item.documentId),
+                            checked as boolean
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className='text-[#636363]'>
+                      {item.documentId}
+                    </TableCell>
+                    <TableCell className='text-[#636363] font-medium'>
                       <div
-                        className={`w-2 h-2 rounded-full ${getStatusColor(
-                          item.status
-                        )}`}
-                      ></div>
-                      <span className='text-gray-700 text-sm'>
-                        {getStatusText(item.status)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className='flex items-center gap-1  w-[200px] md:w-full overflow-auto'>
-                      {item.signers.slice(0, 8).map((signer, index) => (
-                        <div key={index} className='flex items-center gap-1'>
-                          <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
-                            {signer.signed === "yes" ? (
-                              <Image
-                                src={"/tick.svg"}
-                                alt=''
-                                width={16}
-                                height={16}
-                                className='w-4 h-4'
-                              />
-                            ) : (
-                              <Image
-                                src={"/x.svg"}
-                                alt=''
-                                width={16}
-                                height={16}
-                                className='w-4 h-4'
-                              />
-                            )}
-                          </div>
-                          <span className='text-sm md:text-[14px] text-gray-600 max-w-[80px] truncate'>
-                            {signer.name}
-                          </span>
-                        </div>
-                      ))}
-                      {item.signers.length > 8 && (
-                        <span className='text-xs text-gray-500'>
-                          +{item.signers.length - 8} more
+                        className='max-w-[130px] truncate'
+                        title={item.documentName}
+                      >
+                        {item.documentName}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className='flex items-center gap-2'>
+                        <div
+                          className={`w-2 h-2 rounded-full ${getStatusColor(
+                            item.status
+                          )}`}
+                        ></div>
+                        <span className='text-gray-700 text-sm'>
+                          {getStatusText(item.status)}
                         </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className='text-[#636363] text-sm'>
-                    {formatDate(item.created)}
-                  </TableCell>
-                  <TableCell className='text-[#636363] text-sm'>
-                    {formatDate(item.lastActivity)}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='h-8 w-8 p-0'
-                        >
-                          <MoreVertical className='h-4 w-4' />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align='end' className='w-48'>
-                        <DropdownMenuItem
-                          className='text-[#333333]'
-                          onClick={() =>
-                            viewDocument(item.documentName, item.url ?? "")
-                          }
-                        >
-                          Open Document
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className='text-[#333333]'>
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                          >
-                            <AddSignerModal documentId={item.documentId}  onDelete={handleDocumentDeleted}/>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className='flex items-center gap-1  w-[200px] md:w-full overflow-auto'>
+                        {item.signers.slice(0, 8).map((signer, index) => (
+                          <div key={index} className='flex items-center gap-1'>
+                            <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
+                              {signer.status == "signed" ? (
+                                <Image
+                                  src={"/tick.svg"}
+                                  alt=''
+                                  width={16}
+                                  height={16}
+                                  className='w-4 h-4'
+                                />
+                              ) : (
+                                <Image
+                                  src={"/x.svg"}
+                                  alt=''
+                                  width={16}
+                                  height={16}
+                                  className='w-4 h-4'
+                                />
+                              )}
+                            </div>
+                            <span className='text-sm md:text-[14px] text-gray-600 max-w-[80px] truncate'>
+                              {signer.name}
+                            </span>
                           </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className='text-[#333333]'>
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
+                        ))}
+                        {item.signers.length > 8 && (
+                          <span className='text-xs text-gray-500'>
+                            +{item.signers.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className='text-[#636363] text-sm'>
+                      {formatDate(item.created)}
+                    </TableCell>
+                    <TableCell className='text-[#636363] text-sm'>
+                      {formatDate(item.lastActivity)}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-8 w-8 p-0'
                           >
-                            <ViewDetails documentId={item.documentId} onDelete={handleDocumentDeleted}/>
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className='text-[#333333]'>
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
+                            <MoreVertical className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align='end' className='w-48'>
+                          <DropdownMenuItem
+                            className='text-[#333333]'
+                            onClick={() =>
+                              viewDocument(
+                                item.documentName,
+                                item.url,
+                                item.documentId
+                              )
+                            }
                           >
-                            <ResendModal />
-                          </div>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className='text-[#333333]'
-                          onClick={() =>
-                            downloadFile(item.url ?? '', item.documentName)
-                          }
-                        >
-                          Download (PDF)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className='text-red-600'>
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
+                            Open Document
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className='text-[#333333]'>
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <AddSignerModal
+                                documentId={item.documentId}
+                                onDelete={handleDocumentDeleted}
+                              />
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className='text-[#333333]'>
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <ViewDetails
+                                documentId={item.documentId}
+                                onDelete={handleDocumentDeleted}
+                              />
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className='text-[#333333]'>
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <ResendModal
+                                documentId={item.documentId}
+                                onDelete={handleDocumentDeleted}
+                              />
+                            </div>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className='text-[#333333]'
+                            onClick={() =>
+                              downloadFile(item.url ?? "", item.documentName)
+                            }
                           >
-                            <DeleteModal
-                              documentId={item.documentId}
-                              onDelete={handleDocumentDeleted}
-                            />
-                          </div>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                            Download (PDF)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className='text-red-600'>
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <DeleteModal
+                                documentId={item.documentId}
+                                onDelete={handleDocumentDeleted}
+                              />
+                            </div>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

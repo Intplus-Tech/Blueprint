@@ -106,6 +106,12 @@ export function AuthModal() {
       setIsLoading(false);
     }
   };
+  const GoogleLoginButton = () => {
+    // Hit your backend /google-login endpoint
+    // This will redirect user to Google
+    window.location.href = `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/auth/google-login`;
+    // replace with your Flask backend base URL
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -141,6 +147,7 @@ export function AuthModal() {
         <div className='space-y-2 mt-2'>
           {/* Google Sign In Button */}
           <Button
+            onClick={GoogleLoginButton}
             variant='outline'
             className='w-full h-12 border-gray-300 hover:bg-gray-50 bg-transparent'
           >
@@ -244,36 +251,35 @@ export function AuthModal() {
             </div>
 
             {!isLogin && (
-           
-            <div className='relative'>
-              <Label
-                htmlFor='confirmPassword'
-                className='text-sm font-medium text-gray-700'
-              >
-              Confirm  Password
-              </Label>
-              <Input
-                id='password'
-                type={showconfirmPassword ? "text" : "password"}
-                value={form.confirmPassword}
-                onChange={(e) => {
-                  setForm({ ...form, confirmPassword: e.target.value });
-                }}
-                placeholder='••••••••••••'
-                className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
-              />
-              <button
-                type='button'
-                onClick={() => setconfirmPassword(!showconfirmPassword)}
-                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
-              >
-                {showOldPassword ? (
-                  <EyeOff className='h-4 w-4' />
-                ) : (
-                  <Eye className='h-4 w-4' />
-                )}
-              </button>
-            </div>
+              <div className='relative'>
+                <Label
+                  htmlFor='confirmPassword'
+                  className='text-sm font-medium text-gray-700'
+                >
+                  Confirm Password
+                </Label>
+                <Input
+                  id='password'
+                  type={showconfirmPassword ? "text" : "password"}
+                  value={form.confirmPassword}
+                  onChange={(e) => {
+                    setForm({ ...form, confirmPassword: e.target.value });
+                  }}
+                  placeholder='••••••••••••'
+                  className='mt-1 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white'
+                />
+                <button
+                  type='button'
+                  onClick={() => setconfirmPassword(!showconfirmPassword)}
+                  className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400'
+                >
+                  {showOldPassword ? (
+                    <EyeOff className='h-4 w-4' />
+                  ) : (
+                    <Eye className='h-4 w-4' />
+                  )}
+                </button>
+              </div>
             )}
 
             {isLogin && (

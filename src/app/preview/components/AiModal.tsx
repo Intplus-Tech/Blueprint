@@ -2,22 +2,30 @@ import { UserContext } from "@/app/AppContext";
 import { AuthModal } from "./siginModal";
 import { useContext, useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import toast from "react-hot-toast";
+import axios from "axios";
+import { Input } from "@/components/ui/input";
+
 type Sender = "user" | "ai";
 interface Message {
-  id: number; // You’re using Date.now(), so it's a number
+  id: number;
   text: string;
-  sender: Sender; // restrict to valid values
-  timestamp: string; // from toLocaleTimeString()
+  sender: Sender;
+  timestamp: string;
 }
+
 const AiModal = () => {
   const { userAuth } = useContext(UserContext);
   const [showChatbot, setShowChatbot] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
+  const inputRef = useRef<HTMLInputElement | null>(null); // Add this back
+  const csrf_token = userAuth?.csrf_token;
   const auth = userAuth?.access_token ? true : false;
+  const access_token = userAuth?.access_token;
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | false>(false); // Better typing
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -27,19 +35,68 @@ const AiModal = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleReviewFree = () => {
-    setShowChatbot(true);
-    // Initial AI greeting message
-    const initialMessage : Message = {
-      id: Date.now(),
-      text: "Hello! I'm AI Torney, your document review assistant. I've analyzed your document and I'm ready to help you with any questions or concerns. What would you like to know about your document?",
-      sender: "ai",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-    setMessages([initialMessage]);
+  // Focus input when chatbot opens
+useEffect(() => {
+  if (showChatbot && inputRef.current) {
+    const focusInput = () => inputRef.current?.focus();
+    focusInput();
+    const interval = setInterval(focusInput, 100);
+    return () => clearInterval(interval);
+  }
+}, [showChatbot]);
+
+
+const fakeClose = () => {
+  const esc = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+  document.dispatchEvent(esc);
+
+};
+
+  const handleReviewFree = async () => {
+    setIsLoading(true);
+    const documentId = sessionStorage.getItem("documentId");
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN + `/api/chat/sessions`,
+        {
+          document_id: documentId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "X-CSRF-Token": csrf_token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setIsLoading(false);
+
+      console.log(data.session_id);
+      setSessionId(data.session_id);
+      setShowChatbot(true);
+
+      // Initial AI greeting message
+      const initialMessage: Message = {
+        id: Date.now(),
+        text: "Hello! I'm AI Torney, your document review assistant. I've analyzed your document and I'm ready to help you with any questions or concerns. What would you like to know about your document?",
+        sender: "ai",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages([initialMessage]);
+
+    } catch (error: unknown) {
+      console.log(error);
+      setIsLoading(false);
+
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+    }
   };
 
   const handleBackToMain = () => {
@@ -48,13 +105,18 @@ const AiModal = () => {
     setInputValue("");
   };
 
-  const handleSendMessage = async (e: { preventDefault: () => void; }) => {
+  const sendMessage = async (e: React.FormEvent) => {
+    const documentId = sessionStorage.getItem("documentId");
     e.preventDefault();
+
     if (!inputValue.trim()) return;
 
-    const userMessage:Message = {
+    // Store the message before clearing input
+    const messageText = inputValue;
+
+    const userMessage: Message = {
       id: Date.now(),
-      text: inputValue,
+      text: messageText,
       sender: "user",
       timestamp: new Date().toLocaleTimeString([], {
         hour: "2-digit",
@@ -63,41 +125,53 @@ const AiModal = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
-    setIsTyping(true);
+    setInputValue(""); // Clear input immediately
+    inputRef.current?.focus();
+    setIsLoading(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(inputValue);
-      const aiMessage:Message = {
+    try {
+      const { data } = await axios.post(
+        process.env.NEXT_PUBLIC_SERVER_DOMAIN +
+          `/api/chat/chatbot/${documentId}`,
+        {
+          session_id: sessionId,
+          message: messageText, // Use stored message, not cleared inputValue
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "X-CSRF-Token": csrf_token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setIsLoading(false);
+      console.log(data.ai_response);
+      
+
+      // Add AI response to messages
+      const aiMessage: Message = {
         id: Date.now() + 1,
-        text: aiResponse,
+        text: data.ai_response,
         sender: "ai",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
+
       setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
-  };
 
-  const generateAIResponse = (userInput:string) => {
-    const input = userInput.toLowerCase();
+    } catch (error: unknown) {
+      console.log(error);
+      setIsLoading(false);
 
-    if (input.includes("summary") || input.includes("overview")) {
-      return "Based on my analysis, your document appears to be well-structured with an overall score of 85/100. I found 3 minor issues and have 5 recommendations for improvement. Would you like me to elaborate on any specific aspect?";
-    } else if (input.includes("issue") || input.includes("problem")) {
-      return "I identified these issues in your document:\n\n1. Section 3.2 could benefit from more specific terms\n2. Payment terms need more detail\n3. One clause may need clarification for better enforceability\n\nWould you like me to explain any of these in detail?";
-    } else if (input.includes("recommend") || input.includes("suggest")) {
-      return "Here are my key recommendations:\n\n• Add specific deadlines in the payment section\n• Include force majeure clause\n• Clarify dispute resolution process\n• Add confidentiality provisions\n• Consider adding termination conditions\n\nShall I provide more details on implementing any of these?";
-    } else if (input.includes("legal") || input.includes("law")) {
-      return "From a legal perspective, your document generally follows standard practices. However, I recommend having it reviewed by a licensed attorney in your jurisdiction, as I can provide guidance but not legal advice. Is there a specific legal concern you'd like me to address?";
-    } else if (input.includes("thank") || input.includes("thanks")) {
-      return "You're welcome! I'm here to help with any other questions about your document. Feel free to ask about specific clauses, legal implications, or improvement suggestions.";
-    } else {
-      return "I understand your question about the document. Based on my analysis, I can provide specific insights about clauses, terms, potential risks, and improvement opportunities. Could you be more specific about what aspect you'd like me to focus on? For example, you could ask about:\n\n• Contract terms and conditions\n• Potential legal issues\n• Recommendations for improvement\n• Specific sections or clauses";
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Something went wrong");
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
@@ -109,7 +183,7 @@ const AiModal = () => {
 
   // Chatbot Component
   const ChatbotComponent = () => (
-    <div className='w-[500px] h-[400px] flex flex-col'>
+    <div className='w-[300px] md:w-[500px] h-[400px] flex flex-col'>
       {/* Header */}
       <div className='flex items-center gap-3 p-4 border-b bg-gray-50'>
         <button
@@ -137,7 +211,7 @@ const AiModal = () => {
         </div>
         <div className='ml-auto flex gap-2 p-2 border rounded-full border-[#CBD5E1]'>
           <Image src={"/web.svg"} height={20} width={20} alt='p' />
-          <p className='text-sm text-gray-500'>www.torney.cc</p>{" "}
+          <p className='text-sm text-gray-500'>www.torney.cc</p>
         </div>
       </div>
 
@@ -151,8 +225,8 @@ const AiModal = () => {
             }`}
           >
             {message.sender !== "user" && (
-              <div className='w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-grey flex items-center justify-center text-black text-xs sm:text-sm font-semibold mr-2 sm:mr-3 flex-shrink-0  bg-blue-500 '>
-                <Image src={"/leaf.svg"} height={20} width={20} alt='p' />
+              <div className='w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center text-black text-xs sm:text-sm font-semibold mr-2 sm:mr-3 flex-shrink-0'>
+                <Image src={"/leaf.svg"} height={20} width={20} alt='AI' />
               </div>
             )}
             <div
@@ -182,8 +256,11 @@ const AiModal = () => {
           </div>
         ))}
 
-        {isTyping && (
+        {isLoading && (
           <div className='flex justify-start'>
+            <div className='w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center mr-2 sm:mr-3 flex-shrink-0'>
+              <Image src={"/leaf.svg"} height={20} width={20} alt='AI' />
+            </div>
             <div className='bg-gray-100 rounded-lg rounded-bl-none p-3'>
               <div className='flex space-x-1'>
                 <div className='w-2 h-2 bg-gray-400 rounded-full animate-bounce'></div>
@@ -203,12 +280,13 @@ const AiModal = () => {
       </div>
 
       {/* Quick Questions */}
-      {messages.length === 1 && (
+      {messages.length === 1 && !isLoading && (
         <div className='px-4 pb-2'>
           <p className='text-xs text-gray-500 mb-2'>Quick questions:</p>
           <div className='flex flex-wrap gap-2'>
             {quickQuestions.map((question, index) => (
               <button
+                type='button'
                 key={index}
                 onClick={() => setInputValue(question)}
                 className='text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full border'
@@ -221,38 +299,44 @@ const AiModal = () => {
       )}
 
       {/* Input */}
-      <form onSubmit={handleSendMessage} className='p-4 border-t bg-white'>
-        <div className='flex gap-2'>
-          <input
-            type='text'
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder='Message to AI Torney...'
-            className='flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-            disabled={isTyping}
-          />
-          <button
-            type='submit'
-            disabled={!inputValue.trim() || isTyping}
-            className='px-4 py-2 gap-2 flex bg-[#006FEE] hover:bg-blue-600  text-white rounded-lg transition-colors'
-          >
-            <span>Send</span>
-            <Image src={"/right.svg"} height={20} width={20} alt='p' />
-          </button>
-        </div>
-      </form>
+<form onSubmit={sendMessage} className='p-4 border-t bg-white'>
+  <div className='flex gap-2'>
+    <Input
+      ref={inputRef}
+      type='text'
+      value={inputValue}
+      onChange={(e) => setInputValue(e.target.value)}
+      onKeyDown={(e) => e.stopPropagation()}
+      placeholder='Message to AI Torney...'
+      disabled={isLoading}
+      className='flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50'
+    />
+    <button
+      type='submit'
+      disabled={!inputValue.trim() || isLoading}
+      className='px-4 py-2 gap-2 flex bg-[#006FEE] hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors'
+    >
+      <span>Send</span>
+      <Image src={"/right.svg"} height={20} width={20} alt='Send' />
+    </button>
+  </div>
+</form>
     </div>
   );
 
   return (
-    <div>
+    <div
+       onKeyDown={(e) => e.stopPropagation()}
+    onMouseDown={(e) => e.stopPropagation()}
+    onTouchStart={(e) => e.stopPropagation()}
+    >
       {auth ? (
         <div>
           {showChatbot ? (
             <ChatbotComponent />
           ) : (
             <div className='w-full flex-col space-x-3 space-y-4 p-4 gap-5'>
-              <p className='text-2xl text-gray-500 '>AI Document Reviewer</p>
+              <p className='text-xl md:text-2xl text-gray-500'>AI Document Reviewer</p>
 
               <p>
                 Do you want continue with AI Torney to Review your document.
@@ -271,18 +355,43 @@ const AiModal = () => {
               </p>
 
               <div className='flex justify-end gap-2 mt-2'>
-                <button
+                {/* <button
                   type='button'
+                  onClick={fakeClose}
                   className='px-3 py-2 border hover:bg-gray-100 rounded-xl'
                 >
                   Cancel
-                </button>
+                </button> */}
                 <button
                   type='button'
                   onClick={handleReviewFree}
-                  className='px-3 py-2 bg-blue-500 hover:bg-blue-700 text-white rounded-xl'
+                  disabled={isLoading}
+                  className='px-3 py-2 bg-blue-500 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl'
                 >
-                  Review free
+                  {isLoading ? (
+                    <svg
+                      className='animate-spin h-5 w-5 text-white'
+                      xmlns='http://www.w3.org/2000/svg'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      />
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z'
+                      />
+                    </svg>
+                  ) : (
+                    " Review free"
+                  )}
                 </button>
               </div>
             </div>

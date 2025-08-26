@@ -23,8 +23,9 @@ export default function Dashboard() {
   // while loading, just show a spinner or placeholder
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading...</p>
+      <div className="flex flex-col items-center justify-center h-screen">
+         <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700"></div>
+          <span className="mt-2 text-sm text-gray-600">Loading documents...</span>
       </div>
     );
   }

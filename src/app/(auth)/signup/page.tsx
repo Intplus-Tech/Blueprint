@@ -68,6 +68,12 @@ export default function SignUpPage() {
       router.push("/dashboard");
     }
   },[isVerified,router]);
+  const GoogleLoginButton = () => {
+    // Hit your backend /google-login endpoint
+    // This will redirect user to Google
+    window.location.href = `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/auth/google-login`; 
+    // replace with your Flask backend base URL
+  };
   return (
     <div className='h-screen flex'>
         {/* Left Side - Image */}
@@ -127,6 +133,7 @@ export default function SignUpPage() {
           <div className='space-y-1'>
             {/* Google Sign In Button */}
             <Button
+            onClick={GoogleLoginButton}
               variant='outline'
               className='w-full h-12 border-gray-300 hover:bg-gray-50 bg-white'
             >

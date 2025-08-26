@@ -269,82 +269,84 @@ const PDFViewer = () => {
   };
 
   // Drag handlers with touch support
- // Updated drag handlers with better touch support
-const handleMouseDown = (e, signature) => {
-  try {
-    e.preventDefault();
-  } catch (error) {
-    // Ignore preventDefault errors for passive listeners
-  }
-  
-  if (e.stopPropagation) {
-    e.stopPropagation();
-  }
+  // Updated drag handlers with better touch support
+  const handleMouseDown = (e, signature) => {
+    try {
+      e.preventDefault();
+    } catch (error) {
+      // Ignore preventDefault errors for passive listeners
+    }
 
-  const rect = overlayRef.current.getBoundingClientRect();
-  
-  // Handle both mouse and touch events
-  let clientX, clientY;
-  
-  if (e.type === 'touchstart') {
-    if (e.touches && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+
+    const rect = overlayRef.current.getBoundingClientRect();
+
+    // Handle both mouse and touch events
+    let clientX, clientY;
+
+    if (e.type === "touchstart") {
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        return;
+      }
     } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    if (isNaN(clientX) || isNaN(clientY)) {
       return;
     }
-  } else {
-    clientX = e.clientX;
-    clientY = e.clientY;
-  }
 
-  if (isNaN(clientX) || isNaN(clientY)) {
-    return;
-  }
+    const offsetX = clientX - rect.left - (signature.x - signature.width / 2);
+    const offsetY = clientY - rect.top - (signature.y - signature.height / 2);
 
-  const offsetX = clientX - rect.left - (signature.x - signature.width / 2);
-  const offsetY = clientY - rect.top - (signature.y - signature.height / 2);
+    setDraggedSignature(signature);
+    setDragOffset({ x: offsetX, y: offsetY });
+    setIsDragging(true);
+  };
 
-  setDraggedSignature(signature);
-  setDragOffset({ x: offsetX, y: offsetY });
-  setIsDragging(true);
-};
+  const handleMouseMove = (e) => {
+    if (!isDragging || !draggedSignature || !overlayRef.current) return;
 
-const handleMouseMove = (e) => {
-  if (!isDragging || !draggedSignature || !overlayRef.current) return;
+    const rect = overlayRef.current.getBoundingClientRect();
 
-  const rect = overlayRef.current.getBoundingClientRect();
-  
-  // Handle both mouse and touch events
-  let clientX, clientY;
-  
-  if (e.type === 'touchmove') {
-    if (e.touches && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
+    // Handle both mouse and touch events
+    let clientX, clientY;
+
+    if (e.type === "touchmove") {
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        return;
+      }
     } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    if (isNaN(clientX) || isNaN(clientY)) {
       return;
     }
-  } else {
-    clientX = e.clientX;
-    clientY = e.clientY;
-  }
 
-  if (isNaN(clientX) || isNaN(clientY)) {
-    return;
-  }
+    const newX =
+      clientX - rect.left - dragOffset.x + draggedSignature.width / 2;
+    const newY =
+      clientY - rect.top - dragOffset.y + draggedSignature.height / 2;
 
-  const newX = clientX - rect.left - dragOffset.x + draggedSignature.width / 2;
-  const newY = clientY - rect.top - dragOffset.y + draggedSignature.height / 2;
+    setSignatures((prev) =>
+      prev.map((sig) =>
+        sig.id === draggedSignature.id ? { ...sig, x: newX, y: newY } : sig
+      )
+    );
 
-  setSignatures((prev) =>
-    prev.map((sig) =>
-      sig.id === draggedSignature.id ? { ...sig, x: newX, y: newY } : sig
-    )
-  );
-
-  setDraggedSignature((prev) => ({ ...prev, x: newX, y: newY }));
-};
+    setDraggedSignature((prev) => ({ ...prev, x: newX, y: newY }));
+  };
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -517,7 +519,7 @@ const handleMouseMove = (e) => {
       console.log("Signed PDF URL:", data);
     } catch (err) {
       console.log(err);
-      toast.error(err?.response.data.error||"Something went wrong");
+      toast.error(err?.response.data.error || "Something went wrong");
     }
   };
 
@@ -792,8 +794,8 @@ const handleMouseMove = (e) => {
                       height={15}
                     />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <AiModal />
+                  <DropdownMenuContent className="w-[300px] md:w-full mr-8" >
+                    <AiModal/>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -818,9 +820,14 @@ const handleMouseMove = (e) => {
                     />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleSaveSignature}>
+                    <DropdownMenuItem onClick={handleDownload}>
                       Download PDF
                     </DropdownMenuItem>
+                    {access_token && (
+                      <DropdownMenuItem onClick={handleSaveSignature}>
+                        Save PDF
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -880,63 +887,63 @@ const handleMouseMove = (e) => {
                     currentSignature && !isDragging ? "none" : "auto",
                 }}
               >
-              {signatures
-  .filter((sig) => sig.page === currentPage)
-  .map((sig) => (
-    <div
-      key={sig.id}
-      className={`absolute group select-none ${
-        isDragging && draggedSignature?.id === sig.id
-          ? "cursor-grabbing"
-          : "cursor-grab hover:ring-2 hover:ring-blue-400"
-      }`}
-      style={{
-        left: sig.x - sig.width / 2,
-        top: sig.y - sig.height / 2,
-        width: sig.width,
-        height: sig.height,
-        pointerEvents: "auto",
-        touchAction: "none", // Prevent default touch behaviors
-      }}
-      onMouseDown={(e) => handleMouseDown(e, sig)}
-      onTouchStart={(e) => {
-        e.preventDefault(); // Prevent scrolling
-        handleMouseDown(e, sig);
-      }}
-    >
-      <img
-        src={sig.data.data}
-        alt='Signature'
-        className='w-full h-full object-cover pointer-events-none'
-        draggable={false}
-      />
-      {/* Delete button */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          removeSignature(sig.id);
-        }}
-        onTouchStart={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          removeSignature(sig.id);
-        }}
-        className={`
+                {signatures
+                  .filter((sig) => sig.page === currentPage)
+                  .map((sig) => (
+                    <div
+                      key={sig.id}
+                      className={`absolute group select-none ${
+                        isDragging && draggedSignature?.id === sig.id
+                          ? "cursor-grabbing"
+                          : "cursor-grab hover:ring-2 hover:ring-blue-400"
+                      }`}
+                      style={{
+                        left: sig.x - sig.width / 2,
+                        top: sig.y - sig.height / 2,
+                        width: sig.width,
+                        height: sig.height,
+                        pointerEvents: "auto",
+                        touchAction: "none", // Prevent default touch behaviors
+                      }}
+                      onMouseDown={(e) => handleMouseDown(e, sig)}
+                      onTouchStart={(e) => {
+                        e.preventDefault(); // Prevent scrolling
+                        handleMouseDown(e, sig);
+                      }}
+                    >
+                      <img
+                        src={sig.data.data}
+                        alt='Signature'
+                        className='w-full h-full object-cover pointer-events-none'
+                        draggable={false}
+                      />
+                      {/* Delete button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSignature(sig.id);
+                        }}
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          removeSignature(sig.id);
+                        }}
+                        className={`
           absolute -top-2 -right-1 text-xl font-bold bg-white rounded-full 
           flex items-center justify-center shadow-md transition-opacity
           text-red-500 hover:text-red-700 cursor-pointer
           opacity-0 group-hover:opacity-100
           ${isMobile ? "w-8 h-8" : "w-6 h-6"}
         `}
-        style={{ 
-          pointerEvents: "auto",
-          touchAction: "manipulation" // Allow touch but prevent other gestures
-        }}
-      >
-        ×
-      </button>
-    </div>
-  ))}
+                        style={{
+                          pointerEvents: "auto",
+                          touchAction: "manipulation", // Allow touch but prevent other gestures
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
               </div>
 
               {/* Status Messages */}
