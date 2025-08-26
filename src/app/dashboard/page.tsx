@@ -32,7 +32,7 @@ export default function Dashboard() {
   return (
     <div className='bg-[#F3F3F6] h-screen'>
       <Header />
-      <div className='flex items-center py-2 px-10'>
+      <div className='flex w-full items-center py-2 px-1 md:px-10'>
         <Button
           size={"lg"}
           onClick={() => setActive("document")}

@@ -126,7 +126,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
     setShowNewSignerForm(false);
   };
   const getSignerLabel = (signer: Signer, index: number) => {
-    if (signer.isCurrentUser) return signer.name;
+    if (index===0) return signer.name + " (You)";
     return `Signer ${index + 1}`;
   };
 
@@ -168,7 +168,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
     );
 
     setDetails(formattedData);
-    console.log(formattedData, "formatted signers");
+    console.log(formattedData, "data from resends");
   } catch (error: unknown) {
     console.log(error);
     if (axios.isAxiosError(error)) {
@@ -211,7 +211,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
                         {getSignerLabel(signer, index)}
                       </span>
                       <div className='flex items-center gap-2'>
-                        {signer.status === "signed" ? (
+                        {signer.status === "Signed" ? (
                           <>
                             <Check className='h-4 w-4 text-green-500' />
                             <span className='text-sm text-gray-600'>
@@ -243,7 +243,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
                       </div>
 
                       <div className='flex items-center gap-2'>
-                        {signer.status !== "signed" && (
+                        {signer.status !== "signed" && index !== 0 && (
                           <Button
                             size='sm'
                             onClick={() =>
