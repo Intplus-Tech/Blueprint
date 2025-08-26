@@ -156,7 +156,7 @@ export function ViewDetails({ documentId, onDelete }: DocumentId) {
       <DialogTrigger asChild>
         <p className='cursor-pointer hover:text-blue-600'>View Details</p>
       </DialogTrigger>
-      <DialogContent className='max-w-md bg-white text-gray-900 rounded-lg border p-0 max-h-[90vh] overflow-auto'>
+      <DialogContent className='w-[350px] md:w-full bg-white text-gray-900 rounded-lg border p-0 max-h-[90vh] overflow-auto'>
         {/* Header */}
         <DialogHeader className='flex flex-row items-center justify-between px-6 py-2  border-b border-gray-100'>
           <DialogTitle className='text-lg font-semibold text-gray-900'>

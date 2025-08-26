@@ -190,7 +190,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
       <DialogTrigger asChild>
         <p className='cursor-pointer '>Resend</p>
       </DialogTrigger>
-      <DialogContent className='max-w-lg bg-white text-gray-900 rounded-lg border p-0 max-h-[90vh] overflow-hidden'>
+      <DialogContent className='w-[350px] md:w-full bg-white text-gray-900 rounded-lg border p-0 max-h-[90vh] overflow-hidden'>
         {/* Header */}
         <DialogHeader className='flex flex-row items-center justify-between p-6 pb-4'>
           <DialogTitle className='text-xl font-semibold text-gray-900'>
@@ -249,7 +249,7 @@ export function ResendModal({ documentId, onDelete }: DocumentId) {
                             onClick={() =>
                               handleResendInvite(signer.name, signer.email)
                             }
-                            className='bg-[#268DE9] hover:bg-blue-700 text-white text-xs px-3 py-1'
+                            className='bg-[#268DE9] w-[70px] md:w-[150px] hover:bg-blue-700 text-white text-[10px] md:text-xs px-3 py-1'
                           >
                             Resend Invite
                           </Button>
