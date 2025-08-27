@@ -218,13 +218,15 @@ const PDFViewer = () => {
 
   useEffect(() => {
     if (pdfDoc) {
-      renderPage(pdfDoc, pageNum);
+      renderPage(pdfDoc, 1);
     }
   }, [pdfDoc, pageNum]);
 
   useEffect(() => {
     if (pdfDoc) {
-      renderPage(pdfDoc, currentPage);
+      console.log("working");
+      
+      renderPage(pdfDoc, 1);
     }
   }, [scale]);
 
