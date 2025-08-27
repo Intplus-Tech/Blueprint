@@ -49,10 +49,6 @@ const PDFViewer = () => {
   const { userAuth, setUserAuth } = useContext(UserContext);
   const access_token = searchParams.get("access_token");
 
-
-
- 
-
   const handleLogout = () => {
     removeFromSession("user");
     toast.success("Log Out Successful");
@@ -418,7 +414,7 @@ const PDFViewer = () => {
     };
   }, [pdfDoc, currentPage, scale, signatures]);
 
-   const handleDownload = async () => {
+  const handleDownload = async () => {
     if (!pdfDoc || !canvasRef.current) return;
 
     try {
@@ -491,7 +487,7 @@ const PDFViewer = () => {
   };
   const handleSaveSignature = async () => {
     const documentId = searchParams.get("document_id");
-   const toastId = toast.loading("signing your document...");
+    const toastId = toast.loading("signing your document...");
     if (!signatures.length) {
       toast.error("No signature to save");
       return;
@@ -544,11 +540,11 @@ const PDFViewer = () => {
       page_number: signature.page,
       pos_x: bounded_pos_x,
       pos_y: bounded_pos_y,
-      width: width +20,
+      width: width + 20,
       height: height,
       is_pdf_coordinates: true, // Indicate Y is in PDF bottom-left coordinates
     };
-    
+
     console.log(payload);
 
     try {
@@ -562,10 +558,14 @@ const PDFViewer = () => {
           },
         }
       );
+      toast.dismiss(toastId);
+
       toast.success("Document Signed successfully!");
       console.log("Signed PDF URL:", data);
     } catch (err) {
       console.log(err);
+      toast.dismiss(toastId);
+
       toast.error(err?.response.data.error || "Something went wrong");
     }
   };
@@ -796,7 +796,6 @@ const PDFViewer = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
-
 
               <button
                 onClick={() => setActive("write")}
