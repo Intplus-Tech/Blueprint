@@ -140,7 +140,7 @@ const AddNewComponents = () => {
             />
             My Device
           </div>
-          <div className='flex items-center gap-2 cursor-pointer hover:opacity-80 py-1'>
+          {/* <div className='flex items-center gap-2 cursor-pointer hover:opacity-80 py-1'>
             {" "}
             <Image
               src={"/drive.svg"}
@@ -150,7 +150,7 @@ const AddNewComponents = () => {
               className='w-[17px] h-[17px] object-cover'
             />{" "}
             Google Drive
-          </div>
+          </div> */}
         </>
       ) : (
         <div>

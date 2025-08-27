@@ -272,6 +272,21 @@ export default function AddSignature({
                 onMouseMove={draw}
                 onMouseUp={stopDrawing}
                 onMouseLeave={stopDrawing}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  startDrawing({
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                  } as unknown as React.MouseEvent<HTMLCanvasElement>);
+                }}
+                onTouchMove={(e) => {
+                    e.preventDefault();
+                  const touch = e.touches[0];
+                  draw({
+                    clientX: touch.clientX,
+                    clientY: touch.clientY,
+                  } as unknown as React.MouseEvent<HTMLCanvasElement>);
+                }}
                 style={{ imageRendering: "auto" }}
               />
               <button
@@ -378,7 +393,10 @@ export default function AddSignature({
             </div>
             <div className='bg-blue-50 rounded-lg p-4'>
               <div className='bg-white rounded border-b-2 border-gray-400 p-4 text-center'>
-                <div className='text-2xl  text-gray-800' style={{ fontFamily: "'Great Vibes', cursive" }}>
+                <div
+                  className='text-2xl  text-gray-800'
+                  style={{ fontFamily: "'Great Vibes', cursive" }}
+                >
                   {userName}
                 </div>
               </div>

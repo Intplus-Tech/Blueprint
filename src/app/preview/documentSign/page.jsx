@@ -17,15 +17,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import Link from "next/link";
-import AddNewComponents from "./components/AddNewComponents";
-import Signers from "./components/Signers";
-import AiModal from "./components/AiModal";
-import AddSignature from "./components/AddSignature";
+import AddNewComponents from "../components/AddNewComponents";
+import AiModal from "../components/AiModal";
+import AddSignature from "../components/AddSignature";
 import jsPDF from "jspdf";
-import { useRouter } from "next/navigation";
-import AddText from "./components/AddText";
-import { UserContext } from "../AppContext";
-import { removeFromSession } from "../(auth)/components/session";
+import { useRouter, useSearchParams } from "next/navigation";
+import AddText from "../components/AddText";
+import { UserContext } from "../../AppContext";
+import { removeFromSession } from "../../(auth)/components/session";
 import toast from "react-hot-toast";
 import axios from "axios";
 
@@ -45,8 +44,14 @@ const PDFViewer = () => {
   const [signatures, setSignatures] = useState([]);
   const [pdfName, setPdfName] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const { userAuth, setUserAuth } = useContext(UserContext);
-  const access_token = userAuth?.access_token;
+  const access_token = searchParams.get("access_token");
+
+
+
+ 
 
   const handleLogout = () => {
     removeFromSession("user");
@@ -105,8 +110,8 @@ const PDFViewer = () => {
 
   // Load PDF file from sessionStorage
   const loadPdfFromSession = async () => {
-    const fileUrl = sessionStorage.getItem("UploadedFile");
-    const filename = sessionStorage.getItem("UploadedFileName");
+    const fileUrl = searchParams.get("document_url");
+    const filename = searchParams.get("filename");
     setPdfName(filename);
     if (!fileUrl) {
       setIsLoading(false);
@@ -128,70 +133,22 @@ const PDFViewer = () => {
   };
 
   const generateThumbnails = async (pdf) => {
-    // Initialize empty thumbnails array
     const thumbs = [];
-
-    // Step 1: Generate thumbnail for the first page immediately
-    try {
-      const page = await pdf.getPage(1); // Get the first page
-      const viewport = page.getViewport({ scale: 0.3 }); // Use a reasonable scale
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 0.2 });
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
       await page.render({ canvasContext: context, viewport }).promise;
-      await new Promise((resolve) => setTimeout(resolve, 50)); // Small delay for stability
-
-      const dataUrl = canvas.toDataURL("image/png", 1.0);
       thumbs.push({
-        pageNum: 1,
-        dataUrl: dataUrl || "/placeholder.png", // Fallback image
+        pageNum: i,
+        dataUrl: canvas.toDataURL(),
       });
-
-      // Update state with the first thumbnail
-      setThumbnails([...thumbs]);
-    } catch (err) {
-      console.error("Failed to render thumbnail for page 1:", err);
-      thumbs.push({
-        pageNum: 1,
-        dataUrl: "/placeholder.png", // Fallback image
-      });
-      setThumbnails([...thumbs]);
     }
-
-    // Step 2: Generate thumbnails for remaining pages in the background
-    for (let i = 2; i <= pdf.numPages; i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.3 });
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        await page.render({ canvasContext: context, viewport }).promise;
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
-        const dataUrl = canvas.toDataURL("image/png", 1.0);
-        thumbs.push({
-          pageNum: i,
-          dataUrl: dataUrl || "/placeholder.png", // Fallback image
-        });
-
-        // Update state incrementally to show progress
-        setThumbnails([...thumbs]);
-      } catch (err) {
-        console.error(`Failed to render thumbnail for page ${i}:`, err);
-        thumbs.push({
-          pageNum: i,
-          dataUrl: "/placeholder.png", // Fallback image
-        });
-        setThumbnails([...thumbs]);
-      }
-    }
+    setThumbnails(thumbs);
   };
 
   const renderPage = async (pdf, pageNum) => {
@@ -461,7 +418,7 @@ const PDFViewer = () => {
     };
   }, [pdfDoc, currentPage, scale, signatures]);
 
-  const handleDownload = async () => {
+   const handleDownload = async () => {
     if (!pdfDoc || !canvasRef.current) return;
 
     try {
@@ -533,8 +490,8 @@ const PDFViewer = () => {
     }
   };
   const handleSaveSignature = async () => {
-    const documentId = sessionStorage.getItem("documentId");
-    const toastId = toast.loading("signing your document...");
+    const documentId = searchParams.get("document_id");
+   const toastId = toast.loading("signing your document...");
     if (!signatures.length) {
       toast.error("No signature to save");
       return;
@@ -591,11 +548,12 @@ const PDFViewer = () => {
       height: height,
       is_pdf_coordinates: true, // Indicate Y is in PDF bottom-left coordinates
     };
-    console.log("Payload:", payload);
+    
+    console.log(payload);
 
     try {
       const { data } = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/sign`,
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/documents/${documentId}/send/sign`,
         payload,
         {
           headers: {
@@ -605,12 +563,10 @@ const PDFViewer = () => {
         }
       );
       toast.success("Document Signed successfully!");
-      console.log("Signed PDF URL:", data.cloudinary_url);
-      toast.dismiss(toastId);
+      console.log("Signed PDF URL:", data);
     } catch (err) {
       console.log(err);
       toast.error(err?.response.data.error || "Something went wrong");
-      toast.dismiss(toastId);
     }
   };
 
@@ -841,30 +797,6 @@ const PDFViewer = () => {
                 </DropdownMenu>
               </button>
 
-              <button
-                onClick={() => setActive("team")}
-                className={
-                  "p-1 rounded hover:bg-gray-700 flex-shrink-0 " +
-                  (active === "team" && "bg-black")
-                }
-              >
-                <DropdownMenu
-                  open={active === "team"}
-                  onOpenChange={(open) => setActive(open ? "team" : "note")}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <Image
-                      src={"/team.svg"}
-                      alt='team'
-                      width={20}
-                      height={15}
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className='mt-3'>
-                    <Signers />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </button>
 
               <button
                 onClick={() => setActive("write")}

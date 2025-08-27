@@ -260,7 +260,7 @@ export default function Component() {
                         />{" "}
                         My Device
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleDriveUploaad}>
+                      {/* <DropdownMenuItem onClick={handleDriveUploaad}>
                         {" "}
                         <Image
                           src={"/drive.svg"}
@@ -270,7 +270,7 @@ export default function Component() {
                           className='w-[17px] h-[17px] object-cover'
                         />{" "}
                         Google Drive
-                      </DropdownMenuItem>
+                      </DropdownMenuItem> */}
                     </DropdownMenuContent>
                   </DropdownMenu>
 

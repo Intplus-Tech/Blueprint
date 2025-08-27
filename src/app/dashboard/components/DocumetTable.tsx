@@ -434,7 +434,7 @@ const DocumentTable = () => {
                         {item.signers.slice(0, 8).map((signer, index) => (
                           <div key={index} className='flex items-center gap-1'>
                             <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
-                              {signer.status == "signed" ? (
+                              {signer.status == "signed" || signer.status == "Signed"  ? (
                                 <Image
                                   src={"/tick.svg"}
                                   alt=''
