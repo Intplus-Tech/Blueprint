@@ -189,7 +189,7 @@ export default function Component() {
                 href='/dashboard'
                 className='text-white/80 hover:text-white hover:underline transition-colors'
               >
-               Dashboard
+                Dashboard
               </Link>
             </nav>
           )}
@@ -285,7 +285,7 @@ export default function Component() {
         <footer className='p-6 lg:px-12'>
           <div className='flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0'>
             <div className='text-white/60 text-sm'>
-              © 2025 Torney.cc. All Rights Reserved
+              © 2025 <a href='http://www.torney.cc' className="underline text-white/60 text-sm">Torney AI.</a> All Rights Reserved
             </div>
 
             <nav className='flex items-center space-x-3 md:space-x-8 md:text-sm text-[10px]'>
