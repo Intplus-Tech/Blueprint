@@ -422,7 +422,7 @@ export default function AddSignature({
             <Clock className='w-5 h-5 text-gray-600' />
           </button>
           <button
-            onClick={() => setCurrentMethod("draw")}
+            onClick={() => {setCurrentMethod("draw");setShowAddSignature(true);}}
             className={`p-4 hover:bg-gray-100 ${
               currentMethod === "draw"
                 ? "bg-white border-r-2 border-blue-600"
@@ -432,7 +432,7 @@ export default function AddSignature({
             <Edit className='w-5 h-5 text-gray-600' />
           </button>
           <button
-            onClick={() => setCurrentMethod("name")}
+            onClick={() => {setCurrentMethod("name");setShowAddSignature(true);}}
             className={`p-4 hover:bg-gray-100 ${
               currentMethod === "name"
                 ? "bg-white border-r-2 border-blue-600"
@@ -442,7 +442,7 @@ export default function AddSignature({
             <Type className='w-5 h-5 text-gray-600' />
           </button>
           <button
-            onClick={() => setCurrentMethod("upload")}
+            onClick={() => {setCurrentMethod("upload"); setShowAddSignature(true);}}
             className={`p-4 hover:bg-gray-100 ${
               currentMethod === "upload"
                 ? "bg-white border-r-2 border-blue-600"

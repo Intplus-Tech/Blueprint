@@ -59,6 +59,7 @@ export default function Dashboard() {
         </Button>
       </div>
       {active === "document" && <DocumentTable />}
+      {active === "invoices" && <p className="text-center">Coming Soon.....</p>}
     </div>
   );
 }

@@ -35,6 +35,7 @@ import { UserContext } from "@/app/AppContext";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { NewDocument } from "@/app/preview/components/Documents";
 
 interface Signer {
   name: string;
@@ -294,19 +295,14 @@ const DocumentTable = () => {
   };
 
   return (
-    <div className='w-full rounded-lg shadow-sm border border-gray-200 bg-white'>
+    <div className='w-full px-8 rounded-lg shadow-sm border border-gray-200 bg-white'>
       {/* Header */}
-      <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:p-6 border-b border-gray-200'>
+      <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 sm:py-5 sm:px-1 border-b border-gray-200'>
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1'>
           <h1 className='text-xl sm:text-2xl font-semibold text-gray-900'>
             Documents
           </h1>
-          <Link href={"/"}>
-            <Button className='bg-[#268DE9] cursor-pointer hover:bg-blue-700 text-white w-full sm:w-auto'>
-              <Plus className='w-4 h-4 mr-2' />
-              New Document
-            </Button>
-          </Link>
+          <NewDocument />
         </div>
         <div className='flex items-center gap-2 w-full sm:w-auto'>
           <Button
@@ -381,9 +377,8 @@ const DocumentTable = () => {
                 <TableRow>
                   <TableCell colSpan={8} className='py-10 h-[330px]'>
                     <div className='flex flex-col items-center justify-center'>
-                     
                       <span className='mt-2 text-sm text-gray-600'>
-                       You dont have any Documents....
+                        You dont have any Documents....
                       </span>
                     </div>
                   </TableCell>
@@ -434,7 +429,8 @@ const DocumentTable = () => {
                         {item.signers.slice(0, 8).map((signer, index) => (
                           <div key={index} className='flex items-center gap-1'>
                             <div className='w-3 h-3  md:w-4 md:h-4 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'>
-                              {signer.status == "signed" || signer.status == "Signed"  ? (
+                              {signer.status == "signed" ||
+                              signer.status == "Signed" ? (
                                 <Image
                                   src={"/tick.svg"}
                                   alt=''

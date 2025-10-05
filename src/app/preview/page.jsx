@@ -38,6 +38,7 @@ const PDFViewer = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [documentUrl, setdocumentUrl] = useState("");
   const canvasRef = useRef(null);
   const [pageNum, setPageNum] = useState(1);
   const [active, setActive] = useState("note");
@@ -119,7 +120,9 @@ const PDFViewer = () => {
       setTotalPages(pdf.numPages);
       setCurrentPage(1);
       await generateThumbnails(pdf);
-      await renderPage(pdf, 1);
+      setTimeout(() => {
+        renderPage(pdf, 1);
+      }, 100);
     } catch (err) {
       console.error("Failed to load PDF", err);
     } finally {
@@ -225,7 +228,7 @@ const PDFViewer = () => {
   useEffect(() => {
     if (pdfDoc) {
       console.log("working");
-      
+
       renderPage(pdfDoc, 1);
     }
   }, [scale]);
@@ -464,74 +467,25 @@ const PDFViewer = () => {
   }, [pdfDoc, currentPage, scale, signatures]);
 
   const handleDownload = async () => {
-    if (!pdfDoc || !canvasRef.current) return;
-
+    if (!documentUrl) return toast.error("You have to save a signature first");
     try {
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: "a4",
-      });
+      const res = await fetch(documentUrl);
+      if (!res.ok) throw new Error("Failed to download");
 
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale });
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
 
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.width = viewport.width + 15;
-        canvas.height = viewport.height + 110;
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = pdfName || "download";
+      document.body.appendChild(link);
+      link.click();
 
-        await page.render({ canvasContext: context, viewport }).promise;
-        const pageImage = canvas.toDataURL("image/png");
-
-        if (pageNum > 1) {
-          pdf.addPage([viewport.width, viewport.height], "portrait");
-        } else {
-          pdf.internal.pageSize.setWidth(viewport.width);
-          pdf.internal.pageSize.setHeight(viewport.height);
-        }
-
-        pdf.addImage(pageImage, "PNG", 0, 0, viewport.width, viewport.height);
-
-        const pageSignatures = signatures.filter((sig) => sig.page === pageNum);
-        const displayedCanvas = canvasRef.current;
-        const scaleRatio = viewport.width / displayedCanvas.width;
-        const sizeMultiplier = 1.1;
-        const yOffset = 10;
-
-        for (const sig of pageSignatures) {
-          const scaledX = sig.x * scaleRatio;
-          const scaledY = sig.y * scaleRatio + yOffset;
-          const scaledWidth = sig.width * scaleRatio * sizeMultiplier;
-          const scaledHeight = sig.height * scaleRatio * sizeMultiplier;
-
-          const finalX = scaledX - scaledWidth / 2;
-          const finalY = scaledY - scaledHeight / 2;
-
-          const boundedX = Math.max(
-            0,
-            Math.min(finalX, viewport.width - scaledWidth)
-          );
-          const boundedY = Math.max(
-            0,
-            Math.min(finalY, viewport.height - scaledHeight)
-          );
-
-          pdf.addImage(
-            sig.data.data,
-            "PNG",
-            boundedX,
-            boundedY,
-            scaledWidth,
-            scaledHeight
-          );
-        }
-      }
-
-      pdf.save(pdfName || "modified-document");
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error("Failed to generate PDF for download", err);
+      console.error(err);
+      toast.error("Download failed");
     }
   };
   const handleSaveSignature = async () => {
@@ -589,7 +543,7 @@ const PDFViewer = () => {
       page_number: signature.page,
       pos_x: bounded_pos_x,
       pos_y: bounded_pos_y,
-      width: width +20,
+      width: width + 20,
       height: height,
       is_pdf_coordinates: true, // Indicate Y is in PDF bottom-left coordinates
     };
@@ -608,6 +562,89 @@ const PDFViewer = () => {
       );
       toast.success("Document Signed successfully!");
       console.log("Signed PDF URL:", data.cloudinary_url);
+      setdocumentUrl(data.cloudinary_url);
+      toast.dismiss(toastId);
+    } catch (err) {
+      console.log(err);
+      toast.error(err?.response.data.error || "Something went wrong");
+      toast.dismiss(toastId);
+    }
+  };
+  const handleSaveSignatureGuest = async () => {
+    const documentId = sessionStorage.getItem("documentId");
+    const toastId = toast.loading("signing your document...");
+    if (!signatures.length) {
+      toast.error("No signature to save");
+      return;
+    }
+
+    // Pick the last placed signature
+    const signature = signatures[signatures.length - 1];
+
+    // Get the canvas and its viewport
+    const canvas = canvasRef.current;
+    if (!canvas || !pdfDoc) return;
+
+    // Get the current page from pdfDoc
+    const page = await pdfDoc.getPage(signature.page);
+    const viewport = page.getViewport({ scale: 1.0 }); // Native PDF size (no scaling)
+
+    // A4 size in points (used by backend)
+    const PAGE_WIDTH = 612; // A4 width in points
+    const PAGE_HEIGHT = 792; // A4 height in points
+
+    // Calculate the scaling factor between displayed canvas and A4
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = PAGE_WIDTH / canvasRect.width; // Map canvas width to A4 width
+    const scaleY = PAGE_HEIGHT / canvasRect.height; // Map canvas height to A4 height
+
+    // Log for debugging
+    console.log("Canvas and Viewport:", {
+      canvasWidth: canvasRect.width,
+      canvasHeight: canvasRect.height,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
+      scaleX,
+      scaleY,
+      signatureX: signature.x,
+      signatureY: signature.y,
+    });
+
+    // Transform coordinates to A4 coordinate system
+    const pos_x = signature.x * scaleX; // Scale X coordinate
+    const pos_y = (canvasRect.height - signature.y) * scaleY; // Flip and scale Y coordinate to PDF bottom-left origin
+    const width = signature.width * scaleX; // Scale signature width
+    const height = signature.height * scaleY; // Scale signature height
+
+    // Ensure coordinates and dimensions are within bounds
+    const bounded_pos_x = Math.max(0, Math.min(pos_x, PAGE_WIDTH - width));
+    const bounded_pos_y = Math.max(0, Math.min(pos_y, PAGE_HEIGHT - height));
+
+    const payload = {
+      signature_base64: signature.data.data,
+      page_number: signature.page,
+      pos_x: bounded_pos_x,
+      pos_y: bounded_pos_y,
+      width: width + 20,
+      height: height,
+      is_pdf_coordinates: true, // Indicate Y is in PDF bottom-left coordinates
+    };
+    console.log("Payload:", payload);
+
+    try {
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_DOMAIN}/api/guest-sign`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      toast.success("Document Signed successfully!");
+      console.log("Signed PDF URL:", data.cloudinary_url);
+      setdocumentUrl(data.cloudinary_url);
       toast.dismiss(toastId);
     } catch (err) {
       console.log(err);
@@ -916,11 +953,6 @@ const PDFViewer = () => {
                     <DropdownMenuItem onClick={handleDownload}>
                       Download PDF
                     </DropdownMenuItem>
-                    {access_token && (
-                      <DropdownMenuItem onClick={handleSaveSignature}>
-                        Save PDF
-                      </DropdownMenuItem>
-                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </button>
@@ -1034,6 +1066,19 @@ const PDFViewer = () => {
                         }}
                       >
                         ×
+                      </button>
+                      <button
+                        onClick={
+                          access_token
+                            ? handleSaveSignature
+                            : handleSaveSignatureGuest
+                        }
+                        className='absolute -bottom-2 -right-9 text-xl font-bold bg-white rounded-full 
+          flex items-center justify-center shadow-md transition-opacity
+          text-blue-500 hover:text-blue-700 cursor-pointer
+       '
+                      >
+                        save signature
                       </button>
                     </div>
                   ))}

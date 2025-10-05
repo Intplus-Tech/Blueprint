@@ -121,7 +121,9 @@ function  PDFViewer() {
       setTotalPages(pdf.numPages);
       setCurrentPage(1);
       await generateThumbnails(pdf);
-      await renderPage(pdf, 1);
+       setTimeout(() => {
+        renderPage(pdf, 1);
+      }, 100);
     } catch (err) {
       console.error("Failed to load PDF", err);
     } finally {

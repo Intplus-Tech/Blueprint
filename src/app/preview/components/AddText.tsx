@@ -146,7 +146,7 @@ export default function AddText({
                 </div>
               </div>
             )}
-            {savedSignatures.map((signature) => (
+            {savedSignatures.filter((sig) => sig.type === "text").map((signature) => (
               <div
                 key={signature.id}
                 className='bg-white border rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow'
@@ -216,7 +216,10 @@ export default function AddText({
             <Clock className='w-5 h-5 text-gray-600' />
           </button>
           <button
-            onClick={() => setCurrentMethod("text")}
+            onClick={() => {
+                  setShowAddSignature(true);
+                  setCurrentMethod("text");
+                }}
             className={`p-4 hover:bg-gray-100 ${
               currentMethod === "text"
                 ? "bg-white border-r-2 border-blue-600"
